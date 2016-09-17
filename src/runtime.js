@@ -476,7 +476,250 @@ var $helper = {
 	} // }}}
 };
 
-var Class = {
+var Type = {
+	is: function(item, clazz) { // {{{
+		if(Type.isConstructor(clazz)) {
+			return item instanceof clazz;
+		}
+		else if(Type.isObject(clazz)) {
+			for(var name in clazz) {
+				if(clazz[name] === item) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}, // }}}
+	isArray: Array.isArray || function(item) { // {{{
+		return Type.typeOf(item) === 'array';
+	}, // }}}
+	isBoolean: function(item) { // {{{
+		return typeof item === 'boolean';
+	}, // }}}
+	isConstructor: function(item) { // {{{
+		if(typeof item !== 'function' || !item.prototype) {
+			return false;
+		}
+		
+		for(var name in item.prototype) {
+			return true;
+		}
+		
+		return Object.getOwnPropertyNames(item.prototype).length > 1;
+	}, // }}}
+	isEmptyObject: function(item) { // {{{
+		if(Type.typeOf(item) !== 'object') {
+			return false;
+		}
+		
+		for(var name in item) {
+			return false;
+		}
+		return true;
+	}, // }}}
+	isEnumerable: function(item) { // {{{
+		return item !== null && typeof(item) === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
+	}, // }}}
+	isFunction: function(item) { // {{{
+		return typeof item === 'function';
+	}, // }}}
+	isNumber: function(item) { // {{{
+		return typeof item === 'number';
+	}, // }}}
+	isNumeric: function(item) { // {{{
+		return !isNaN(parseFloat(item)) && isFinite(item);
+	}, // }}}
+	isObject: function(item) { // {{{
+		return item !== null && typeof item === 'object' && !Type.isArray(item);
+	}, // }}}
+	isPrimitive: function(item) { // {{{
+		var type = typeof item;
+		return type === 'string' || type === 'number' || type === 'boolean';
+	}, // }}}
+	isString: function(item) { // {{{
+		return typeof item === 'string';
+	}, // }}}
+	isValue: function(item) { // {{{
+		return item != null && typeof item !== 'undefined';
+	}, // }}}
+	typeOf: function(item) { // {{{
+		var type = typeof item;
+		
+		if(type === 'object') {
+			if(item === null) {
+				return 'null';
+			}
+			else if(item.constructor.name === 'Date') {
+				return 'date';
+			}
+			else if(item.constructor.name === 'RegExp') {
+				return 'regex';
+			}
+			else if(item.nodeName) {
+				if(item.nodeType === 1) {
+					return 'element';
+				}
+				if(item.nodeType === 3) {
+					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
+				}
+			}
+			else if(typeof item.length === 'number') {
+				if(item.callee) {
+					return 'arguments';
+				}
+				else if(item['item']) {
+					return 'collection';
+				}
+				else {
+					return 'array';
+				}
+			}
+			
+			return 'object';
+		}
+		else if(type === 'function') {
+			return Type.isConstructor(item) ? 'constructor' : 'function';
+		}
+		else {
+			return type;
+		}
+	}, // }}}
+	vexists: function() { // {{{
+		for(var i = 0; i < arguments.length; i++) {
+			if(Type.isValue(arguments[i])) {
+				return arguments[i];
+			}
+		}
+		
+		return null;
+	} // }}}
+};
+
+var Helper = {
+	mapArray: function(array, iterator, condition) { // {{{
+		var map = [];
+		
+		if(condition) {
+			for(var i = 0, l = array.length; i < l; ++i) {
+				if(condition(array[i], i)) {
+					map.push(iterator(array[i], i));
+				}
+			}
+		}
+		else {
+			for(var i = 0, l = array.length; i < l; ++i) {
+				map.push(iterator(array[i], i));
+			}
+		}
+		
+		return map;
+	}, // }}}
+	mapObject: function(object, iterator, condition) { // {{{
+		var map = [];
+		
+		if(condition) {
+			for(var key in object) {
+				if(condition(key, object[key])) {
+					map.push(iterator(key, object[key]));
+				}
+			}
+		}
+		else {
+			for(var key in object) {
+				map.push(iterator(key, object[key]));
+			}
+		}
+		
+		return map;
+	}, // }}}
+	mapRange: function(start, stop, step, iterator, condition) { // {{{
+		var map = [];
+		
+		if(condition) {
+			for(var item = start, i = 0; item <= stop; item += step, ++i) {
+				if(condition(item, i)) {
+					map.push(iterator(item, i));
+				}
+			}
+		}
+		else {
+			for(var item = start, i = 0; item <= stop; item += step, ++i) {
+				map.push(iterator(item, i));
+			}
+		}
+		
+		return map;
+	}, // }}}
+	newArrayRange: function(start, stop, step, from, to) { // {{{
+		if(start <= stop) {
+			if(((stop - start) / step) > 100) {
+				if(from) {
+					var value = start;
+				}
+				else {
+					var value = start + step;
+				}
+				
+				var length = Math.max(Math.ceil((stop - value) / step), 0);
+				
+				if(to && (stop % step === start % step)) {
+					++length;
+				}
+				
+				var array = Array(length);
+				
+				for(var i = 0; i < length; i++, value += step) {
+					array[i] = value;
+				}
+			}
+			else {
+				var array = [];
+				
+				for(var i = from ? start : start + step; i < stop; i += step) {
+					array.push(i);
+				}
+				
+				if(to && i === stop) {
+					array.push(i);
+				}
+			}
+		}
+		else {
+			if(((start - stop) / step) > 100) {
+				if(from) {
+					var value = start;
+				}
+				else {
+					var value = start - step;
+				}
+				
+				var length = Math.max(Math.ceil((value - stop) / step), 0);
+				
+				if(to && (stop % step === start % step)) {
+					++length;
+				}
+				
+				var array = Array(length);
+				
+				for(var i = 0; i < length; i++, value -= step) {
+					array[i] = value;
+				}
+			}
+			else {
+				var array = [];
+				
+				for(var i = from ? start : start - step; i > stop; i -= step) {
+					array.push(i);
+				}
+				
+				if(to && i === stop) {
+					array.push(i);
+				}
+			}
+		}
+		
+		return array;
+	}, // }}}
 	newClassMethod: function(options) { // {{{
 		//console.log(options)
 		if(options.final) { // {{{
@@ -649,129 +892,15 @@ var Class = {
 			
 			$helper.methods(options.class.prototype, name, '', reflect.instanceMethods[name], $curry($call.method, '__ks_func_' + name + '_', 'arguments'), 'arguments', 'instanceMethods.' + name);
 		} // }}}
-	} // }}}
-};
-
-var Type = {
-	is: function(item, clazz) { // {{{
-		if(Type.isConstructor(clazz)) {
-			return item instanceof clazz;
-		}
-		else if(Type.isObject(clazz)) {
-			for(var name in clazz) {
-				if(clazz[name] === item) {
-					return true;
-				}
-			}
-		}
-		return false;
 	}, // }}}
-	isArray: Array.isArray || function(item) { // {{{
-		return Type.typeOf(item) === 'array';
-	}, // }}}
-	isBoolean: function(item) { // {{{
-		return typeof item === 'boolean';
-	}, // }}}
-	isConstructor: function(item) { // {{{
-		if(typeof item !== 'function' || !item.prototype) {
-			return false;
-		}
-		
-		for(var name in item.prototype) {
-			return true;
-		}
-		
-		return Object.getOwnPropertyNames(item.prototype).length > 1;
-	}, // }}}
-	isEmptyObject: function(item) { // {{{
-		if(Type.typeOf(item) !== 'object') {
-			return false;
-		}
-		
-		for(var name in item) {
-			return false;
-		}
-		return true;
-	}, // }}}
-	isEnumerable: function(item) { // {{{
-		return item !== null && typeof(item) === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
-	}, // }}}
-	isFunction: function(item) { // {{{
-		return typeof item === 'function';
-	}, // }}}
-	isNumber: function(item) { // {{{
-		return typeof item === 'number';
-	}, // }}}
-	isNumeric: function(item) { // {{{
-		return !isNaN(parseFloat(item)) && isFinite(item);
-	}, // }}}
-	isObject: function(item) { // {{{
-		return item !== null && typeof item === 'object' && !Type.isArray(item);
-	}, // }}}
-	isPrimitive: function(item) { // {{{
-		var type = typeof item;
-		return type === 'string' || type === 'number' || type === 'boolean';
-	}, // }}}
-	isString: function(item) { // {{{
-		return typeof item === 'string';
-	}, // }}}
-	isValue: function(item) { // {{{
-		return item != null && typeof item !== 'undefined';
-	}, // }}}
-	typeOf: function(item) { // {{{
-		var type = typeof item;
-		
-		if(type === 'object') {
-			if(item === null) {
-				return 'null';
-			}
-			else if(item.constructor.name === 'Date') {
-				return 'date';
-			}
-			else if(item.constructor.name === 'RegExp') {
-				return 'regex';
-			}
-			else if(item.nodeName) {
-				if(item.nodeType === 1) {
-					return 'element';
-				}
-				if(item.nodeType === 3) {
-					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
-				}
-			}
-			else if(typeof item.length === 'number') {
-				if(item.callee) {
-					return 'arguments';
-				}
-				else if(item['item']) {
-					return 'collection';
-				}
-				else {
-					return 'array';
-				}
-			}
-			
-			return 'object';
-		}
-		else if(type === 'function') {
-			return Type.isConstructor(item) ? 'constructor' : 'function';
-		}
-		else {
-			return type;
-		}
-	}, // }}}
-	vexists: function() { // {{{
-		for(var i = 0; i < arguments.length; i++) {
-			if(Type.isValue(arguments[i])) {
-				return arguments[i];
-			}
-		}
-		
-		return null;
+	vcurry: function(self, bind, ...args) { // {{{
+		return function(...supplements) {
+			return self.apply(bind, args.concat(supplements));
+		};
 	} // }}}
 };
 
 module.exports = {
-	Class: Class,
+	Helper: Helper,
 	Type: Type
 };

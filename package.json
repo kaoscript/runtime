@@ -1,7 +1,7 @@
 {
 	"name": "@kaoscript/runtime",
-	"description": "Runtime for Kaoscript",
-	"version": "0.1.0",
+	"description": "The default runtime for kaoscript",
+	"version": "0.2.0",
 	"author": {
 		"name": "Baptiste Augrain",
 		"email": "daiyam@zokugun.org"
@@ -19,7 +19,10 @@
 			"url": "http://www.opensource.org/licenses/mit-license.php"
 		}
 	],
-	"main": "build/runtime.js",
+	"engines": {
+		"node": ">= 6.0.0"
+	},
+	"main": "src/runtime.js",
 	"files": [
 		"build",
 		"src"
@@ -28,10 +31,6 @@
 	},
 	"devDependencies": {
 	},
-	"engines": {
-		"node": ">= 6.0.0"
-	},
-	"kaoscript": {
-		"main": "src/runtime.ks"
+	"scripts": {
 	}
 }
