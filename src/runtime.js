@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.1.0
+ * Version 0.3.0
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
@@ -583,15 +583,6 @@ var Type = {
 		else {
 			return type;
 		}
-	}, // }}}
-	vexists: function() { // {{{
-		for(var i = 0; i < arguments.length; i++) {
-			if(Type.isValue(arguments[i])) {
-				return arguments[i];
-			}
-		}
-		
-		return null;
 	} // }}}
 };
 

@@ -5,10 +5,14 @@
 
 The default runtime for **kaoscript**.
 
-Dodumentation is available at [kaoscript](https://github.com/kaoscript/kaoscript).
+Documentation available at [kaoscript](https://github.com/kaoscript/kaoscript).
 
 Changelog
 ---------
+
+### 0.3.0
+
+- remove function `vexists`
 
 ### 0.2.0
 
