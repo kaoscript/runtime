@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.3.0
+ * Version 0.3.1
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
@@ -476,6 +476,37 @@ var $helper = {
 	} // }}}
 };
 
+var $parameter = {
+	equals: function(a, b) {
+		return a.min === b.min && a.max === b.max && a.type === b.type;
+	}
+};
+
+var $signature = {
+	contains: function(list, signature) {
+		for(var i = 0; i < list.length; i++) {
+			if($signature.equals(signature, list[i])) {
+				return true;
+			}
+		}
+		
+		return false;
+	},
+	equals: function(a, b) {
+		if(a.min === b.min && a.max === b.max && a.final === b.final && a.parameters.length === b.parameters.length) {
+			for(var i = 0, l = a.parameters.length; i < l; i++) {
+				if(!$parameter.equals(a.parameters[i], b.parameters[i])) {
+					return false;
+				}
+			}
+			
+			return true;
+		}
+		
+		return false;
+	}
+};
+
 var Type = {
 	is: function(item, clazz) { // {{{
 		if(Type.isConstructor(clazz)) {
@@ -587,6 +618,11 @@ var Type = {
 };
 
 var Helper = {
+	curry: function(self, bind, args = []) { // {{{
+		return function(...supplements) {
+			return self.apply(bind, args.concat(supplements));
+		};
+	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
 		var map = [];
 		
@@ -732,26 +768,31 @@ var Helper = {
 			}
 			methods.push.apply(methods, options.final.__ks_reflect.classMethods[name]);
 			
-			var index = methods.length;
-			
 			options.signature.final = true;
 			
-			options.final.__ks_reflect.classMethods[name].push(options.signature);
-			
-			methods.push(options.signature);
-			
-			if(options.function) {
-				if(options.arguments) {
-					options.final['__ks_sttc_' + name + '_' + index] = function() {
-						return options.function.apply(null, options.arguments.concat(Array.prototype.slice.call(arguments)));
-					};
-				}
-				else {
-					options.final['__ks_sttc_' + name + '_' + index] = options.function;
-				}
+			if($signature.contains(options.final.__ks_reflect.classMethods[name], options.signature)) {
+				// already added
 			}
-			
-			$helper.methods(options.final, '_cm_' + name, '...args', methods, $curry($call.finalClass, '__ks_sttc_' + name + '_'), 'args', 'classMethods.' + name);
+			else {
+				var index = methods.length;
+				
+				options.final.__ks_reflect.classMethods[name].push(options.signature);
+				
+				methods.push(options.signature);
+				
+				if(options.function) {
+					if(options.arguments) {
+						options.final['__ks_sttc_' + name + '_' + index] = function() {
+							return options.function.apply(null, options.arguments.concat(Array.prototype.slice.call(arguments)));
+						};
+					}
+					else {
+						options.final['__ks_sttc_' + name + '_' + index] = options.function;
+					}
+				}
+				
+				$helper.methods(options.final, '_cm_' + name, '...args', methods, $curry($call.finalClass, '__ks_sttc_' + name + '_'), 'args', 'classMethods.' + name);
+			}
 		} // }}}
 		else { // {{{
 			var name = options.name;
@@ -813,36 +854,41 @@ var Helper = {
 			}
 			methods.push.apply(methods, options.final.__ks_reflect.instanceMethods[name]);
 			
-			var index = methods.length;
-			
 			options.signature.final = true;
 			
-			options.final.__ks_reflect.instanceMethods[name].push(options.signature);
-			
-			methods.push(options.signature);
-			
-			if(options.function) {
-				if(options.arguments) {
-					options.final['__ks_func_' + name + '_' + index] = function() {
-						return options.function.apply(this, options.arguments.concat(Array.prototype.slice.call(arguments)));
-					};
-				}
-				else {
-					options.final['__ks_func_' + name + '_' + index] = options.function;
-				}
+			if($signature.contains(options.final.__ks_reflect.instanceMethods[name], options.signature)) {
+				// already added
 			}
-			else if(options.method) {
-				if(options.arguments) {
-					options.final['__ks_func_' + name + '_' + index] = function() {
-						return options.class.prototype[options.method].apply(this, options.arguments.concat(Array.prototype.slice.call(arguments)));
-					};
+			else {
+				var index = methods.length;
+				
+				options.final.__ks_reflect.instanceMethods[name].push(options.signature);
+				
+				methods.push(options.signature);
+				
+				if(options.function) {
+					if(options.arguments) {
+						options.final['__ks_func_' + name + '_' + index] = function() {
+							return options.function.apply(this, options.arguments.concat(Array.prototype.slice.call(arguments)));
+						};
+					}
+					else {
+						options.final['__ks_func_' + name + '_' + index] = options.function;
+					}
 				}
-				else {
-					options.final['__ks_func_' + name + '_' + index] = options.class.prototype[options.method];
+				else if(options.method) {
+					if(options.arguments) {
+						options.final['__ks_func_' + name + '_' + index] = function() {
+							return options.class.prototype[options.method].apply(this, options.arguments.concat(Array.prototype.slice.call(arguments)));
+						};
+					}
+					else {
+						options.final['__ks_func_' + name + '_' + index] = options.class.prototype[options.method];
+					}
 				}
+				
+				$helper.methods(options.final, '_im_' + name, 'that, ...args', methods, $curry($call.finalInstance, '__ks_func_' + name + '_'), 'args', 'instanceMethods.' + name);
 			}
-			
-			$helper.methods(options.final, '_im_' + name, 'that, ...args', methods, $curry($call.finalInstance, '__ks_func_' + name + '_'), 'args', 'instanceMethods.' + name);
 		} // }}}
 		else { // {{{
 			var name = options.name;
