@@ -659,19 +659,97 @@ var Helper = {
 		
 		return map;
 	}, // }}}
-	mapRange: function(start, stop, step, iterator, condition) { // {{{
-		var map = [];
-		
-		if(condition) {
-			for(var item = start, i = 0; item <= stop; item += step, ++i) {
-				if(condition(item, i)) {
+	mapRange: function(start, stop, step, from, to, iterator, condition) { // {{{
+		if(start <= stop) {
+			if(condition) {
+				var map = [];
+				
+				for(var item = from ? start : start + step, i = 0; item < stop; item += step, ++i) {
+					if(condition(item, i)) {
+						map.push(iterator(item, i));
+					}
+				}
+				
+				if(to && item === stop && condition(item, i)) {
+					map.push(iterator(item, i));
+				}
+			}
+			else if(((stop - start) / step) > 100) {
+				if(from) {
+					var value = start;
+				}
+				else {
+					var value = start + step;
+				}
+				
+				var length = Math.max(Math.ceil((stop - value) / step), 0);
+				
+				if(to && (stop % step === start % step)) {
+					++length;
+				}
+				
+				var map = Array(length);
+				
+				for(var i = 0; i < length; i++, value += step) {
+					map[i] = iterator(value, i);
+				}
+			}
+			else {
+				var map = [];
+				
+				for(var item = from ? start : start + step, i = 0; item < stop; item += step, ++i) {
+					map.push(iterator(item, i));
+				}
+				
+				if(to && item === stop) {
 					map.push(iterator(item, i));
 				}
 			}
 		}
 		else {
-			for(var item = start, i = 0; item <= stop; item += step, ++i) {
-				map.push(iterator(item, i));
+			if(condition) {
+				var map = [];
+				
+				for(var item = from ? start : start - step, i = 0; item > stop; item -= step, ++i) {
+					if(condition(item, i)) {
+						map.push(iterator(item, i));
+					}
+				}
+				
+				if(to && item === stop && condition(item, i)) {
+					map.push(iterator(item, i));
+				}
+			}
+			else if(((start - stop) / step) > 100) {
+				if(from) {
+					var value = start;
+				}
+				else {
+					var value = start - step;
+				}
+				
+				var length = Math.max(Math.ceil((value - stop) / step), 0);
+				
+				if(to && (stop % step === start % step)) {
+					++length;
+				}
+				
+				var map = Array(length);
+				
+				for(var i = 0; i < length; i++, value -= step) {
+					map[i] = iterator(value, i);
+				}
+			}
+			else {
+				var map = [];
+				
+				for(var item = from ? start : start - step, i = 0; item > stop; item -= step, ++i) {
+					map.push(iterator(item, i));
+				}
+				
+				if(to && item === stop) {
+					map.push(iterator(item, i));
+				}
 			}
 		}
 		
@@ -693,21 +771,21 @@ var Helper = {
 					++length;
 				}
 				
-				var array = Array(length);
+				var map = Array(length);
 				
 				for(var i = 0; i < length; i++, value += step) {
-					array[i] = value;
+					map[i] = value;
 				}
 			}
 			else {
-				var array = [];
+				var map = [];
 				
 				for(var i = from ? start : start + step; i < stop; i += step) {
-					array.push(i);
+					map.push(i);
 				}
 				
 				if(to && i === stop) {
-					array.push(i);
+					map.push(i);
 				}
 			}
 		}
@@ -726,26 +804,26 @@ var Helper = {
 					++length;
 				}
 				
-				var array = Array(length);
+				var map = Array(length);
 				
 				for(var i = 0; i < length; i++, value -= step) {
-					array[i] = value;
+					map[i] = value;
 				}
 			}
 			else {
-				var array = [];
+				var map = [];
 				
 				for(var i = from ? start : start - step; i > stop; i -= step) {
-					array.push(i);
+					map.push(i);
 				}
 				
 				if(to && i === stop) {
-					array.push(i);
+					map.push(i);
 				}
 			}
 		}
 		
-		return array;
+		return map;
 	}, // }}}
 	newClassMethod: function(options) { // {{{
 		//console.log(options)
