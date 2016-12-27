@@ -567,6 +567,9 @@ var Type = {
 		var type = typeof item;
 		return type === 'string' || type === 'number' || type === 'boolean';
 	}, // }}}
+	isRegExp: function(item) { // {{{
+		return item !== null && typeof item === 'object' && item.constructor.name === 'RegExp';
+	}, // }}}
 	isString: function(item) { // {{{
 		return typeof item === 'string';
 	}, // }}}
@@ -616,6 +619,8 @@ var Type = {
 		}
 	} // }}}
 };
+
+Type.isRegex = Type.isRegExp;
 
 var Helper = {
 	curry: function(self, bind, args = []) { // {{{
