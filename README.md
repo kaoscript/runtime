@@ -7,22 +7,6 @@ The default runtime for **kaoscript**.
 
 Documentation available at [kaoscript](https://github.com/kaoscript/kaoscript).
 
-Changelog
----------
-
-### 0.3.0
-
-- remove function `vexists`
-
-### 0.2.0
-
-- remove use of native classes
-- move classes methods into the `Helper` object
-
-### 0.1.0
-
-- initial release
-
 License
 -------
 
