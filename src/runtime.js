@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.4.0
+ * Version 0.4.1
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
@@ -836,7 +836,7 @@ var Helper = {
 			var name = options.name;
 			var methods = [];
 			
-			if(options.class.__ks_reflect && options.class.__ks_reflect.classMethods[name]) {
+			if(options.class.__ks_reflect && Type.isArray(options.class.__ks_reflect.classMethods[name])) {
 				methods.push.apply(methods, options.class.__ks_reflect.classMethods[name]);
 			}
 			
@@ -846,7 +846,7 @@ var Helper = {
 					classMethods: {}
 				};
 			}
-			if(!options.sealed.__ks_reflect.classMethods[name]) {
+			if(!Type.isArray(options.sealed.__ks_reflect.classMethods[name])) {
 				options.sealed.__ks_reflect.classMethods[name] = [];
 			}
 			methods.push.apply(methods, options.sealed.__ks_reflect.classMethods[name]);
@@ -881,7 +881,7 @@ var Helper = {
 			var name = options.name;
 			var reflect = options.class.__ks_reflect;
 			
-			if(!reflect.classMethods[name]) {
+			if(!Type.isArray(reflect.classMethods[name])) {
 				reflect.classMethods[name] = [];
 			}
 			
@@ -922,7 +922,7 @@ var Helper = {
 			var name = options.name;
 			var methods = [];
 			
-			if(options.class.__ks_reflect && options.class.__ks_reflect.instanceMethods[name]) {
+			if(options.class.__ks_reflect && Type.isArray(options.class.__ks_reflect.instanceMethods[name])) {
 				methods.push.apply(methods, options.class.__ks_reflect.instanceMethods[name]);
 			}
 			
@@ -932,7 +932,7 @@ var Helper = {
 					classMethods: {}
 				};
 			}
-			if(!options.sealed.__ks_reflect.instanceMethods[name]) {
+			if(!Type.isArray(options.sealed.__ks_reflect.instanceMethods[name])) {
 				options.sealed.__ks_reflect.instanceMethods[name] = [];
 			}
 			methods.push.apply(methods, options.sealed.__ks_reflect.instanceMethods[name]);
@@ -977,7 +977,7 @@ var Helper = {
 			var name = options.name;
 			var reflect = options.class.__ks_reflect;
 			
-			if(!reflect.instanceMethods[name]) {
+			if(!Type.isArray(reflect.instanceMethods[name])) {
 				reflect.instanceMethods[name] = [];
 			}
 			
