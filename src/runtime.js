@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.4.1
+ * Version 0.5.0
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
@@ -138,10 +138,7 @@ var $helper = {
 		
 		return null;
 	}, // }}}
-	methods: function(variable, name, parameters, methods, call, argName, refName, returns) { // {{{
-		//var source = 'console.log("' + name + '", arguments);if(false){}';
-		var source = '';
-		
+	methods: function(variable, name, parameters, source, methods, call, argName, refName, returns) { // {{{
 		var method;
 		if(methods.length === 0) {
 			source += 'if(' + argName + '.length !== 0) {';
@@ -217,13 +214,17 @@ var $helper = {
 			}
 			
 			var nf = true;
+			var we = false
 			
 			for(var g = 0; g < groups.length; g++) {
 				group = groups[g];
 				
 				if(group.min === group.max) {
-					if(source.length) {
+					if(we) {
 						source += ' else '
+					}
+					else {
+						we = true;
 					}
 					
 					source += 'if(' + argName + '.length === ' + group.min + ') {';
@@ -238,8 +239,11 @@ var $helper = {
 					source += '}';
 				}
 				else if(group.max < Infinity) {
-					if(source.length) {
+					if(we) {
 						source += ' else '
+					}
+					else {
+						we = true;
 					}
 					
 					source += 'if(' + argName + '.length >= ' + group.min + ' && arguments.length <= ' + group.max + ') {';
@@ -256,7 +260,9 @@ var $helper = {
 				else {
 					nf = false;
 					
-					if(source.length) {
+					if(we) {
+						we = true;
+						
 						source += ' else {'
 					
 						if(group.methods.length === 1) {
@@ -288,7 +294,6 @@ var $helper = {
 				}
 			}
 		}
-		//console.log(source);
 		
 		if(/\bType\b/.test(source)) {
 			variable[name] = eval('(function(Type){return function(' + parameters + ') {' + source + '};})').apply(null, [Type]);
@@ -298,18 +303,18 @@ var $helper = {
 		}
 	}, // }}}
 	methodCheck: function(group, call, argName, refName, returns) { // {{{
-		var {error, source} = $helper.methodCheckTree(group.methods, 0, call, argName, refName, returns);
+		var tree = $helper.methodCheckTree(group.methods, 0, call, argName, refName, returns);
 		
-		if(error) {
+		if(tree.error) {
 			if(returns) {
-				source += 'throw new Error("Wrong type of arguments");';
+				tree.source += 'throw new Error("Wrong type of arguments");';
 			}
 			else {
-				source += ' else {throw new Error("Wrong type of arguments");}';
+				tree.source += ' else {throw new Error("Wrong type of arguments");}';
 			}
 		}
 		
-		return source;
+		return tree.source;
 	}, // }}}
 	methodCheckTree: function(methods, index, call, argName, refName, returns) { // {{{
 		var tree = [];
@@ -381,14 +386,14 @@ var $helper = {
 					item = usage.tree[0];
 					
 					if(u + 1 === usages.length) {
-						if(source.length > 1) {
+						if(source.length) {
 							source += 'else {';
 							
 							ne = false;
 						}
 					}
 					else {
-						if(source.length > 1) {
+						if(source.length) {
 							source += 'else ';
 						}
 						
@@ -623,9 +628,66 @@ var Type = {
 Type.isRegex = Type.isRegExp;
 
 var Helper = {
-	curry: function(self, bind, args = []) { // {{{
-		return function(...supplements) {
-			return self.apply(bind, args.concat(supplements));
+	class: function(api) { // {{{
+		var clazz;
+		
+		if(!!api.$create) {
+			clazz = api.$create;
+			delete api.$create;
+		}
+		else if(!!api.$extends) {
+			clazz = function() {
+				clazz.super.apply(this, arguments);
+			};
+		}
+		else {
+			clazz = function() {};
+		}
+		
+		if(!!api.$extends) {
+			var zuper = function() {};
+			zuper.prototype = api.$extends.prototype;
+			clazz.prototype = new zuper();
+			clazz.prototype.constructor = clazz;
+			
+			clazz.super = api.$extends;
+			
+			for(key in api.$extends) {
+				if(!clazz[key]) {
+					clazz[key] = api.$extends[key];
+				}
+			}
+			
+			delete api.$extends;
+		}
+		
+		if(!!api.$static) {
+			for(var key in api.$static) {
+				clazz[key] = api.$static[key];
+			}
+			
+			delete api.$static;
+		}
+		
+		if(!!api.$name) {
+			clazz.displayName = api.$name;
+			delete api.$name;
+			
+			if(!!api.$version || api.$version === 0) {
+				clazz.version = api.$version;
+				delete api.$version;
+			}
+		}
+		
+		for(var key in api) {
+			clazz.prototype[key] = api[key];
+		}
+		
+		return clazz;
+	}, // }}}
+	curry: function(self, bind, args) { // {{{
+		return function() {
+			return self.apply(bind, [].concat(args, Array.prototype.slice.call(arguments)));
 		};
 	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
@@ -874,7 +936,7 @@ var Helper = {
 					}
 				}
 				
-				$helper.methods(options.sealed, '_cm_' + name, '...args', methods, $curry($call.sealedClass, '__ks_sttc_' + name + '_'), 'args', 'classMethods.' + name);
+				$helper.methods(options.sealed, '_cm_' + name, '', 'var args = Array.prototype.slice.call(arguments);', methods, $curry($call.sealedClass, '__ks_sttc_' + name + '_'), 'args', 'classMethods.' + name);
 			}
 		} // }}}
 		else { // {{{
@@ -914,7 +976,7 @@ var Helper = {
 				}
 			}
 			
-			$helper.methods(options.class, name, '', reflect.classMethods[name], $curry($call.method, '__ks_sttc_' + name + '_', 'arguments'), 'arguments', 'classMethods.' + name);
+			$helper.methods(options.class, name, '', '', reflect.classMethods[name], $curry($call.method, '__ks_sttc_' + name + '_', 'arguments'), 'arguments', 'classMethods.' + name);
 		} // }}}
 	}, // }}}
 	newInstanceMethod: function(options) { // {{{
@@ -970,7 +1032,7 @@ var Helper = {
 					}
 				}
 				
-				$helper.methods(options.sealed, '_im_' + name, 'that, ...args', methods, $curry($call.sealedInstance, '__ks_func_' + name + '_'), 'args', 'instanceMethods.' + name);
+				$helper.methods(options.sealed, '_im_' + name, 'that', 'var args = Array.prototype.slice.call(arguments, 1, arguments.length);', methods, $curry($call.sealedInstance, '__ks_func_' + name + '_'), 'args', 'instanceMethods.' + name);
 			}
 		} // }}}
 		else { // {{{
@@ -1010,12 +1072,13 @@ var Helper = {
 				}
 			}
 			
-			$helper.methods(options.class.prototype, name, '', reflect.instanceMethods[name], $curry($call.method, '__ks_func_' + name + '_', 'arguments'), 'arguments', 'instanceMethods.' + name);
+			$helper.methods(options.class.prototype, name, '', '', reflect.instanceMethods[name], $curry($call.method, '__ks_func_' + name + '_', 'arguments'), 'arguments', 'instanceMethods.' + name);
 		} // }}}
 	}, // }}}
-	vcurry: function(self, bind, ...args) { // {{{
-		return function(...supplements) {
-			return self.apply(bind, args.concat(supplements));
+	vcurry: function(self, bind) { // {{{
+		var args = Array.prototype.slice.call(arguments, 2, arguments.length);
+		return function() {
+			return self.apply(bind, args.concat(Array.prototype.slice.call(arguments)));
 		};
 	} // }}}
 };
