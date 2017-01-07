@@ -573,7 +573,7 @@ var Type = {
 		return type === 'string' || type === 'number' || type === 'boolean';
 	}, // }}}
 	isRegExp: function(item) { // {{{
-		return item !== null && typeof item === 'object' && item.constructor.name === 'RegExp';
+		return item !== null && typeof item === 'object' && Object.prototype.toString.call(item) === '[object RegExp]';
 	}, // }}}
 	isString: function(item) { // {{{
 		return typeof item === 'string';
