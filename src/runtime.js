@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.5.0
+ * Version 0.5.1
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
@@ -551,6 +551,7 @@ var Type = {
 		for(var name in item) {
 			return false;
 		}
+		
 		return true;
 	}, // }}}
 	isEnumerable: function(item) { // {{{
@@ -572,16 +573,20 @@ var Type = {
 		var type = typeof item;
 		return type === 'string' || type === 'number' || type === 'boolean';
 	}, // }}}
-	isRegExp: function(item) { // {{{
-		return item !== null && typeof item === 'object' && Object.prototype.toString.call(item) === '[object RegExp]';
-	}, // }}}
 	isString: function(item) { // {{{
 		return typeof item === 'string';
 	}, // }}}
 	isValue: function(item) { // {{{
 		return item != null && typeof item !== 'undefined';
-	}, // }}}
-	typeOf: function(item) { // {{{
+	} // }}}
+};
+
+if(/foo/.constructor.name === 'RegExp') {
+	Type.isRegExp = function(item) { // {{{
+		return item !== null && typeof item === 'object' && item.constructor.name === 'RegExp';
+	}; // }}}
+	
+	Type.typeOf = function(item) { // {{{
 		var type = typeof item;
 		
 		if(type === 'object') {
@@ -622,8 +627,58 @@ var Type = {
 		else {
 			return type;
 		}
-	} // }}}
-};
+	}; // }}}
+}
+else {
+	Type.isRegExp = function(item) { // {{{
+		return item !== null && typeof item === 'object' && Object.prototype.toString.call(item) === '[object RegExp]';
+	}; // }}}
+	
+	Type.typeOf = function(item) { // {{{
+		var type = typeof item;
+		
+		if(type === 'object') {
+			var name = Object.prototype.toString.call(item);
+			
+			if(item === null) {
+				return 'null';
+			}
+			else if(name === '[object Date]') {
+				return 'date';
+			}
+			else if(name === '[object RegExp]') {
+				return 'regex';
+			}
+			else if(item.nodeName) {
+				if(item.nodeType === 1) {
+					return 'element';
+				}
+				if(item.nodeType === 3) {
+					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
+				}
+			}
+			else if(typeof item.length === 'number') {
+				if(item.callee) {
+					return 'arguments';
+				}
+				else if(item['item']) {
+					return 'collection';
+				}
+				else {
+					return 'array';
+				}
+			}
+			
+			return 'object';
+		}
+		else if(type === 'function') {
+			return Type.isConstructor(item) ? 'constructor' : 'function';
+		}
+		else {
+			return type;
+		}
+	}; // }}}
+}
 
 Type.isRegex = Type.isRegExp;
 
