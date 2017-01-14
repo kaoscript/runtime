@@ -691,9 +691,14 @@ var Helper = {
 			delete api.$create;
 		}
 		else if(!!api.$extends) {
-			clazz = function() {
-				clazz.super.apply(this, arguments);
-			};
+			if(api.$extends.prototype.constructor === api.$extends) {
+				clazz = class $$ extends api.$extends {};
+			}
+			else {
+				clazz = function() {
+					clazz.super.apply(this, arguments);
+				};
+			}
 		}
 		else {
 			clazz = function() {};
