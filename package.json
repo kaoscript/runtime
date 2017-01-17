@@ -22,11 +22,10 @@
 	"engines": {
 		"node": ">= 4.0.0"
 	},
-	"main": "src/runtime.js",
 	"files": [
-		"build",
 		"src"
 	],
+	"main": "src/runtime.js",
 	"dependencies": {
 	},
 	"devDependencies": {
