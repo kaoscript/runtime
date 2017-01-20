@@ -684,27 +684,33 @@ Type.isRegex = Type.isRegExp;
 
 var Helper = {
 	class: function(api) { // {{{
-		var clazz;
-		
-		if(!!api.$create) {
-			clazz = api.$create;
-			delete api.$create;
-		}
-		else if(!!api.$extends) {
-			if(api.$extends.prototype.constructor === api.$extends) {
-				clazz = class $$ extends api.$extends {};
+		if(!!api.$extends) {
+			if(!!api.$create) {
+				if(api.$extends.prototype.constructor === api.$extends) {
+					clazz = eval('(function(zuper){return class ' + (api.$name || '$$') + ' extends zuper {' + api.$create.toString().replace(/^(?:function(?:[\s\w-]*)|\$create\s*)\(/, '\nconstructor(').replace(/\)\s*\{/, ') {super();this.name = this.constructor.name;') + '\n};})').apply(null, [api.$extends]);
+				}
+				else {
+					clazz = api.$create;
+				}
+				
+				delete api.$create;
 			}
 			else {
-				clazz = function() {
-					clazz.super.apply(this, arguments);
-				};
+				if(api.$extends.prototype.constructor === api.$extends) {
+					if(!!api.$name) {
+						clazz = eval('(function(zuper){return class ' + api.$name + ' extends zuper {};})').apply(null, [api.$extends]);
+					}
+					else {
+						clazz = class $$ extends api.$extends {};
+					}
+				}
+				else {
+					clazz = function() {
+						clazz.super.apply(this, arguments);
+					};
+				}
 			}
-		}
-		else {
-			clazz = function() {};
-		}
-		
-		if(!!api.$extends) {
+			
 			var zuper = function() {};
 			zuper.prototype = api.$extends.prototype;
 			clazz.prototype = new zuper();
@@ -719,6 +725,26 @@ var Helper = {
 			}
 			
 			delete api.$extends;
+		}
+		else {
+			if(!!api.$create) {
+				if(!!api.$name) {
+					clazz = eval('(' + api.$create.toString().replace(/^(?:function(?:[\s\w-]*)|\$create\s*)\(/, 'function ' + api.$name + '(') + ')');
+				}
+				else {
+					clazz = api.$create;
+				}
+				
+				delete api.$create;
+			}
+			else {
+				if(!!api.$name) {
+					clazz = eval('(function ' + api.$name + '() {})');
+				}
+				else {
+					clazz = function() {};
+				}
+			}
 		}
 		
 		if(!!api.$static) {
