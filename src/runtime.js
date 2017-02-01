@@ -680,6 +680,7 @@ else {
 	}; // }}}
 }
 
+Type.isClass = Type.isConstructor;
 Type.isRegex = Type.isRegExp;
 
 var Helper = {
@@ -687,7 +688,7 @@ var Helper = {
 		if(!!api.$extends) {
 			if(!!api.$create) {
 				if(api.$extends.prototype.constructor === api.$extends) {
-					clazz = eval('(function(zuper){return class ' + (api.$name || '$$') + ' extends zuper {' + api.$create.toString().replace(/^(?:function(?:[\s\w-]*)|\$create\s*)\(/, '\nconstructor(').replace(/\)\s*\{/, ') {super();this.name = this.constructor.name;') + '\n};})').apply(null, [api.$extends]);
+					clazz = eval('(function(zuper){return class ' + (api.$name || '$$') + ' extends zuper {' + api.$create.toString().replace(/^(?:function(?:[\s\w-]*)|\$create\s*)\(/, '\nconstructor(').replace(/\)\s*\{/, ') {super();') + '\n};})').apply(null, [api.$extends]);
 				}
 				else {
 					clazz = api.$create;
