@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.5.2
+ * Version 0.5.3
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
@@ -512,6 +512,17 @@ var $signature = {
 	} // }}}
 };
 
+var $support = {
+	class: false
+}
+
+try {
+	eval('class $$ {}');
+	
+	$support.class = true;
+}
+catch(e) {}
+
 var Type = {
 	is: function(item, clazz) { // {{{
 		if(Type.isConstructor(clazz)) {
@@ -685,30 +696,36 @@ Type.isRegex = Type.isRegExp;
 
 var Helper = {
 	class: function(api) { // {{{
+		var clazz;
 		if(!!api.$extends) {
 			if(!!api.$create) {
-				if(api.$extends.prototype.constructor === api.$extends) {
+				if($support.class && api.$extends.prototype.constructor === api.$extends) {
 					clazz = eval('(function(zuper){return class ' + (api.$name || '$$') + ' extends zuper {' + api.$create.toString().replace(/^(?:function(?:[\s\w-]*)|\$create\s*)\(/, '\nconstructor(').replace(/\)\s*\{/, ') {super();') + '\n};})').apply(null, [api.$extends]);
 				}
 				else {
-					clazz = api.$create;
+					if(!!api.$name) {
+						clazz = eval('(function(zuper){return ' + api.$create.toString().replace(/^(?:function(?:[\s\w-]*)|\$create\s*)\(/, 'function ' + api.$name + '(').replace(/\)\s*\{/, ') {zuper.apply(this, arguments);') + ';})').apply(null, [api.$extends]);
+					}
+					else {
+						clazz = api.$create;
+					}
 				}
 				
 				delete api.$create;
 			}
 			else {
-				if(api.$extends.prototype.constructor === api.$extends) {
-					if(!!api.$name) {
-						clazz = eval('(function(zuper){return class ' + api.$name + ' extends zuper {};})').apply(null, [api.$extends]);
-					}
-					else {
-						clazz = class $$ extends api.$extends {};
-					}
+				if($support.class && api.$extends.prototype.constructor === api.$extends) {
+					clazz = eval('(function(zuper){return class ' + (api.$name || '$$') + ' extends zuper {};})').apply(null, [api.$extends]);
 				}
 				else {
-					clazz = function() {
-						clazz.super.apply(this, arguments);
-					};
+					if(!!api.$name) {
+						clazz = eval('(function(zuper){return function ' + api.$name + '() {zuper.apply(this, arguments);};})').apply(null, [api.$extends]);
+					}
+					else {
+						clazz = function() {
+							clazz.super.apply(this, arguments);
+						};
+					}
 				}
 			}
 			
