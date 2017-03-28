@@ -1,6 +1,6 @@
 /**
  * runtime.js
- * Version 0.5.1
+ * Version 0.5.2
  * September 14th, 2016
  *
  * Copyright (c) 2016 Baptiste Augrain
