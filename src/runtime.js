@@ -11,13 +11,6 @@ var $support = {
 	class: false
 }
 
-try {
-	eval('class $$ {}');
-	
-	$support.class = true;
-}
-catch(e) {}
-
 var Type = {
 	is: function(item, clazz) { // {{{
 		if(Type.isConstructor(clazz)) {
@@ -505,6 +498,15 @@ var Helper = {
 		};
 	} // }}}
 };
+
+try {
+	eval('class $$ {}');
+	
+	$support.class = true;
+	
+	Helper.create = eval('(function(){return function(clazz,args){return new clazz(...args)}})()')
+}
+catch(e) {}
 
 module.exports = {
 	Helper: Helper,
