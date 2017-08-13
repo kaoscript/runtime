@@ -284,6 +284,13 @@ var Helper = {
 		
 		return clazz;
 	}, // }}}
+	create: function(clazz, args) { // {{{
+		var o = Object.create(clazz.prototype);
+		
+		clazz.apply(o, args);
+		
+		return o;
+	}, // }}}
 	curry: function(self, bind, args) { // {{{
 		return function() {
 			return self.apply(bind, [].concat(args, Array.prototype.slice.call(arguments)));
