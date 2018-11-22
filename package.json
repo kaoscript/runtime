@@ -26,10 +26,7 @@
 		"src"
 	],
 	"main": "src/runtime.js",
-	"dependencies": {
-	},
-	"devDependencies": {
-	},
-	"scripts": {
-	}
+	"dependencies": {},
+	"devDependencies": {},
+	"scripts": {}
 }
