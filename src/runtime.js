@@ -35,22 +35,22 @@ var Type = {
 		if(typeof item !== 'function' || !item.prototype) {
 			return false;
 		}
-		
+
 		for(var name in item.prototype) {
 			return true;
 		}
-		
+
 		return Object.getOwnPropertyNames(item.prototype).length > 1;
 	}, // }}}
 	isEmptyObject: function(item) { // {{{
 		if(Type.typeOf(item) !== 'object') {
 			return false;
 		}
-		
+
 		for(var name in item) {
 			return false;
 		}
-		
+
 		return true;
 	}, // }}}
 	isEnumerable: function(item) { // {{{
@@ -84,10 +84,10 @@ if(/foo/.constructor.name === 'RegExp') {
 	Type.isRegExp = function(item) { // {{{
 		return item !== null && typeof item === 'object' && item.constructor.name === 'RegExp';
 	}; // }}}
-	
+
 	Type.typeOf = function(item) { // {{{
 		var type = typeof item;
-		
+
 		if(type === 'object') {
 			if(item === null) {
 				return 'null';
@@ -117,7 +117,7 @@ if(/foo/.constructor.name === 'RegExp') {
 					return 'array';
 				}
 			}
-			
+
 			return 'object';
 		}
 		else if(type === 'function') {
@@ -132,13 +132,13 @@ else {
 	Type.isRegExp = function(item) { // {{{
 		return item !== null && typeof item === 'object' && Object.prototype.toString.call(item) === '[object RegExp]';
 	}; // }}}
-	
+
 	Type.typeOf = function(item) { // {{{
 		var type = typeof item;
-		
+
 		if(type === 'object') {
 			var name = Object.prototype.toString.call(item);
-			
+
 			if(item === null) {
 				return 'null';
 			}
@@ -167,7 +167,7 @@ else {
 					return 'array';
 				}
 			}
-			
+
 			return 'object';
 		}
 		else if(type === 'function') {
@@ -198,7 +198,7 @@ var Helper = {
 						clazz = api.$create;
 					}
 				}
-				
+
 				delete api.$create;
 			}
 			else {
@@ -216,20 +216,20 @@ var Helper = {
 					}
 				}
 			}
-			
+
 			var zuper = function() {};
 			zuper.prototype = api.$extends.prototype;
 			clazz.prototype = new zuper();
 			clazz.prototype.constructor = clazz;
-			
+
 			clazz.super = api.$extends;
-			
+
 			for(key in api.$extends) {
 				if(!clazz[key]) {
 					clazz[key] = api.$extends[key];
 				}
 			}
-			
+
 			delete api.$extends;
 		}
 		else {
@@ -240,7 +240,7 @@ var Helper = {
 				else {
 					clazz = api.$create;
 				}
-				
+
 				delete api.$create;
 			}
 			else {
@@ -252,36 +252,59 @@ var Helper = {
 				}
 			}
 		}
-		
+
 		if(!!api.$static) {
 			for(var key in api.$static) {
 				clazz[key] = api.$static[key];
 			}
-			
+
 			delete api.$static;
 		}
-		
+
 		if(!!api.$name) {
 			clazz.displayName = api.$name;
 			delete api.$name;
-			
+
 			if(!!api.$version || api.$version === 0) {
 				clazz.version = api.$version;
 				delete api.$version;
 			}
 		}
-		
+
 		for(var key in api) {
 			clazz.prototype[key] = api[key];
 		}
-		
+
 		return clazz;
+	}, // }}}
+	concatObject: function() { // {{{
+		var to = {};
+
+		var src, keys, k, l, key, descriptor
+		for(var i = 0; i < arguments.length; i++) {
+			src = arguments[i];
+			if(src === undefined || src === null) {
+				continue;
+			}
+
+			keys = Object.keys(Object(src));
+
+			for (k = 0, l = keys.length; k < l; k++) {
+				key = keys[k];
+				descriptor = Object.getOwnPropertyDescriptor(src, key);
+				if(descriptor !== undefined && descriptor.enumerable) {
+					to[key] = src[key];
+				}
+			}
+		}
+
+		return to;
 	}, // }}}
 	create: function(clazz, args) { // {{{
 		var o = Object.create(clazz.prototype);
-		
+
 		clazz.apply(o, args);
-		
+
 		return o;
 	}, // }}}
 	curry: function(self, bind, args) { // {{{
@@ -291,7 +314,7 @@ var Helper = {
 	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
 		var map = [];
-		
+
 		if(condition) {
 			for(var i = 0, l = array.length; i < l; ++i) {
 				if(condition(array[i], i)) {
@@ -304,12 +327,12 @@ var Helper = {
 				map.push(iterator(array[i], i));
 			}
 		}
-		
+
 		return map;
 	}, // }}}
 	mapObject: function(object, iterator, condition) { // {{{
 		var map = [];
-		
+
 		if(condition) {
 			for(var key in object) {
 				if(condition(key, object[key])) {
@@ -322,20 +345,20 @@ var Helper = {
 				map.push(iterator(key, object[key]));
 			}
 		}
-		
+
 		return map;
 	}, // }}}
 	mapRange: function(start, stop, step, from, to, iterator, condition) { // {{{
 		if(start <= stop) {
 			if(condition) {
 				var map = [];
-				
+
 				for(var item = from ? start : start + step, i = 0; item < stop; item += step, ++i) {
 					if(condition(item, i)) {
 						map.push(iterator(item, i));
 					}
 				}
-				
+
 				if(to && item === stop && condition(item, i)) {
 					map.push(iterator(item, i));
 				}
@@ -347,26 +370,26 @@ var Helper = {
 				else {
 					var value = start + step;
 				}
-				
+
 				var length = Math.max(Math.ceil((stop - value) / step), 0);
-				
+
 				if(to && (stop % step === start % step)) {
 					++length;
 				}
-				
+
 				var map = Array(length);
-				
+
 				for(var i = 0; i < length; i++, value += step) {
 					map[i] = iterator(value, i);
 				}
 			}
 			else {
 				var map = [];
-				
+
 				for(var item = from ? start : start + step, i = 0; item < stop; item += step, ++i) {
 					map.push(iterator(item, i));
 				}
-				
+
 				if(to && item === stop) {
 					map.push(iterator(item, i));
 				}
@@ -375,13 +398,13 @@ var Helper = {
 		else {
 			if(condition) {
 				var map = [];
-				
+
 				for(var item = from ? start : start - step, i = 0; item > stop; item -= step, ++i) {
 					if(condition(item, i)) {
 						map.push(iterator(item, i));
 					}
 				}
-				
+
 				if(to && item === stop && condition(item, i)) {
 					map.push(iterator(item, i));
 				}
@@ -393,32 +416,32 @@ var Helper = {
 				else {
 					var value = start - step;
 				}
-				
+
 				var length = Math.max(Math.ceil((value - stop) / step), 0);
-				
+
 				if(to && (stop % step === start % step)) {
 					++length;
 				}
-				
+
 				var map = Array(length);
-				
+
 				for(var i = 0; i < length; i++, value -= step) {
 					map[i] = iterator(value, i);
 				}
 			}
 			else {
 				var map = [];
-				
+
 				for(var item = from ? start : start - step, i = 0; item > stop; item -= step, ++i) {
 					map.push(iterator(item, i));
 				}
-				
+
 				if(to && item === stop) {
 					map.push(iterator(item, i));
 				}
 			}
 		}
-		
+
 		return map;
 	}, // }}}
 	newArrayRange: function(start, stop, step, from, to) { // {{{
@@ -430,26 +453,26 @@ var Helper = {
 				else {
 					var value = start + step;
 				}
-				
+
 				var length = Math.max(Math.ceil((stop - value) / step), 0);
-				
+
 				if(to && (stop % step === start % step)) {
 					++length;
 				}
-				
+
 				var map = Array(length);
-				
+
 				for(var i = 0; i < length; i++, value += step) {
 					map[i] = value;
 				}
 			}
 			else {
 				var map = [];
-				
+
 				for(var i = from ? start : start + step; i < stop; i += step) {
 					map.push(i);
 				}
-				
+
 				if(to && i === stop) {
 					map.push(i);
 				}
@@ -463,32 +486,32 @@ var Helper = {
 				else {
 					var value = start - step;
 				}
-				
+
 				var length = Math.max(Math.ceil((value - stop) / step), 0);
-				
+
 				if(to && (stop % step === start % step)) {
 					++length;
 				}
-				
+
 				var map = Array(length);
-				
+
 				for(var i = 0; i < length; i++, value -= step) {
 					map[i] = value;
 				}
 			}
 			else {
 				var map = [];
-				
+
 				for(var i = from ? start : start - step; i > stop; i -= step) {
 					map.push(i);
 				}
-				
+
 				if(to && i === stop) {
 					map.push(i);
 				}
 			}
 		}
-		
+
 		return map;
 	}, // }}}
 	vcurry: function(self, bind) { // {{{
@@ -501,9 +524,9 @@ var Helper = {
 
 try {
 	eval('class $$ {}');
-	
+
 	$support.class = true;
-	
+
 	Helper.create = eval('(function(){return function(clazz,args){return new clazz(...args)}})()')
 }
 catch(e) {}
