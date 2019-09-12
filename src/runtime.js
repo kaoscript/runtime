@@ -42,17 +42,6 @@ var Type = {
 
 		return Object.getOwnPropertyNames(item.prototype).length > 1;
 	}, // }}}
-	isEmptyObject: function(item) { // {{{
-		if(Type.typeOf(item) !== 'object') {
-			return false;
-		}
-
-		for(var name in item) {
-			return false;
-		}
-
-		return true;
-	}, // }}}
 	isEnumerable: function(item) { // {{{
 		return item !== null && typeof(item) === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
 	}, // }}}
@@ -61,9 +50,6 @@ var Type = {
 	}, // }}}
 	isNumber: function(item) { // {{{
 		return typeof item === 'number';
-	}, // }}}
-	isNumeric: function(item) { // {{{
-		return !isNaN(parseFloat(item)) && isFinite(item);
 	}, // }}}
 	isObject: function(item) { // {{{
 		return item !== null && typeof item === 'object' && !Type.isArray(item);
@@ -76,7 +62,7 @@ var Type = {
 		return typeof item === 'string';
 	}, // }}}
 	isValue: function(item) { // {{{
-		return item != null && typeof item !== 'undefined';
+		return item !== void 0 && item !== null;
 	} // }}}
 };
 
@@ -183,6 +169,19 @@ Type.isClass = Type.isConstructor;
 Type.isRegex = Type.isRegExp;
 
 var Helper = {
+	array: function(value) { // {{{
+		if(Type.isEnumerable(value)) {
+			if(Type.isArray(value)) {
+				return value;
+			}
+			else {
+				return Array.prototype.slice.call(value);
+			}
+		}
+		else {
+			return [value];
+		}
+	}, // }}}
 	class: function(api) { // {{{
 		var clazz;
 		if(!!api.$extends) {
@@ -283,7 +282,7 @@ var Helper = {
 		var src, keys, k, l, key, descriptor
 		for(var i = 0; i < arguments.length; i++) {
 			src = arguments[i];
-			if(src === undefined || src === null) {
+			if(src === void 0 || src === null) {
 				continue;
 			}
 
@@ -292,13 +291,29 @@ var Helper = {
 			for (k = 0, l = keys.length; k < l; k++) {
 				key = keys[k];
 				descriptor = Object.getOwnPropertyDescriptor(src, key);
-				if(descriptor !== undefined && descriptor.enumerable) {
+				if(descriptor !== void 0 && descriptor.enumerable) {
 					to[key] = src[key];
 				}
 			}
 		}
 
 		return to;
+	}, // }}}
+	concatString: function() { // {{{
+		var str = '';
+
+		var arg;
+		for(var i = 0; i < arguments.length; i++) {
+			arg = arguments[i];
+
+			if(arg === void 0 || arg === null) {
+				continue;
+			}
+
+			str += arg
+		}
+
+		return str;
 	}, // }}}
 	create: function(clazz, args) { // {{{
 		var o = Object.create(clazz.prototype);
@@ -311,6 +326,17 @@ var Helper = {
 		return function() {
 			return self.apply(bind, [].concat(args, Array.prototype.slice.call(arguments)));
 		};
+	}, // }}}
+	isEmptyObject: function(value) { // {{{
+		if(Type.typeOf(value) !== 'object') {
+			return false;
+		}
+
+		for(var name in value) {
+			return false;
+		}
+
+		return true;
 	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
 		var map = [];
@@ -522,6 +548,230 @@ var Helper = {
 	} // }}}
 };
 
+function $check(v, op) { // {{{
+	if(!Type.isNumber(v)) {
+		throw new TypeError('The elements of a ' + op + ' must be numbers');
+	}
+
+	return v
+} // }}}
+
+var Operator = {
+	addOrConcat: function() { // {{{
+		var arg;
+		for(var i = 0; i < arguments.length; i++) {
+			arg = arguments[i];
+
+			if(Type.isString(arg)) {
+				return Helper.concatString.apply(this, arguments);
+			}
+		}
+
+		return Operator.addition.apply(this, arguments);
+	}, // }}}
+	addition: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'addition');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result += $check(arguments[i], 'addition');
+		}
+
+		return result;
+	}, // }}}
+	bitwiseAnd: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'bitwise-and');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result &= $check(arguments[i], 'bitwise-and');
+		}
+
+		return result;
+	}, // }}}
+	bitwiseLeftShift: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'bitwise-left-shift');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result <<= $check(arguments[i], 'bitwise-left-shift');
+		}
+
+		return result;
+	}, // }}}
+	bitwiseOr: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'bitwise-or');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result |= $check(arguments[i], 'bitwise-or');
+		}
+
+		return result;
+	}, // }}}
+	bitwiseNot: function(value) { // {{{
+		if(!Type.isValue(value)) {
+			return null
+		}
+
+		return ~$check(value, 'bitwise-not');
+	}, // }}}
+	bitwiseRightShift: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'bitwise-right-shift');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result >>= $check(arguments[i], 'bitwise-right-shift');
+		}
+
+		return result;
+	}, // }}}
+	bitwiseXor: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'bitwise-xor');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result ^= $check(arguments[i], 'bitwise-xor');
+		}
+
+		return result;
+	}, // }}}
+	division: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'division');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result /= $check(arguments[i], 'division');
+		}
+
+		return result;
+	}, // }}}
+	modulo: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'modulo');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result %= $check(arguments[i], 'modulo');
+		}
+
+		return result;
+	}, // }}}
+	multiplication: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'multiplication');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result *= $check(arguments[i], 'multiplication');
+		}
+
+		return result;
+	}, // }}}
+	negative: function(value) { // {{{
+		if(!Type.isValue(value)) {
+			return null
+		}
+
+		return -$check(value, 'negative');
+	}, // }}}
+	quotient: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'quotient');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result = Number.parseInt(result / $check(arguments[i], 'quotient'));
+		}
+
+		return result;
+	}, // }}}
+	subtraction: function() { // {{{
+		if(!Type.isValue(arguments[0])) {
+			return null
+		}
+
+		var result = $check(arguments[0], 'subtraction');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(!Type.isValue(arguments[i])) {
+				return null
+			}
+
+			result -= $check(arguments[i], 'subtraction');
+		}
+
+		return result;
+	} // }}}
+}
+
 try {
 	eval('class $$ {}');
 
@@ -533,5 +783,6 @@ catch(e) {}
 
 module.exports = {
 	Helper: Helper,
+	Operator: Operator,
 	Type: Type
 };
