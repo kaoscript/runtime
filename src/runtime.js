@@ -12,24 +12,11 @@ var $support = {
 }
 
 var Type = {
-	is: function(item, clazz) { // {{{
-		if(Type.isConstructor(clazz)) {
-			return item instanceof clazz;
-		}
-		else if(Type.isObject(clazz)) {
-			for(var name in clazz) {
-				if(clazz[name] === item) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}, // }}}
 	isArray: Array.isArray || function(item) { // {{{
 		return Type.typeOf(item) === 'array';
 	}, // }}}
 	isBoolean: function(item) { // {{{
-		return typeof item === 'boolean';
+		return typeof item === 'boolean' || item instanceof Boolean;
 	}, // }}}
 	isConstructor: function(item) { // {{{
 		if(typeof item !== 'function' || !item.prototype) {
@@ -42,24 +29,36 @@ var Type = {
 
 		return Object.getOwnPropertyNames(item.prototype).length > 1;
 	}, // }}}
+	isEnum: function(item) { // {{{
+		return Type.isValue(item) && item.__ks_type === 'enum';
+	}, // }}}
+	isEnumMember: function(item, type) { // {{{
+		return Type.isValue(item) && item.__ks_enum === type;
+	}, // }}}
 	isEnumerable: function(item) { // {{{
 		return item !== null && typeof(item) === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
 	}, // }}}
 	isFunction: function(item) { // {{{
 		return typeof item === 'function';
 	}, // }}}
+	isInstance: function(item, type) { // {{{
+		return item instanceof type;
+	}, // }}}
+	isNamespace: function(item) { // {{{
+		return Type.isValue(item) && item.__ks_type === 'namespace';
+	}, // }}}
 	isNumber: function(item) { // {{{
-		return typeof item === 'number';
+		return typeof item === 'number' || item instanceof Number;
 	}, // }}}
 	isObject: function(item) { // {{{
-		return item !== null && typeof item === 'object' && !Type.isArray(item);
+		return Type.typeOf(item) === 'object';
 	}, // }}}
 	isPrimitive: function(item) { // {{{
 		var type = typeof item;
 		return type === 'string' || type === 'number' || type === 'boolean';
 	}, // }}}
 	isString: function(item) { // {{{
-		return typeof item === 'string';
+		return typeof item === 'string' || item instanceof String;
 	}, // }}}
 	isValue: function(item) { // {{{
 		return item !== void 0 && item !== null;
@@ -92,6 +91,17 @@ if(/foo/.constructor.name === 'RegExp') {
 					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
 				}
 			}
+			else if(item.__ks_type) {
+				if(item.__ks_type === 'enum') {
+					return 'enum';
+				}
+				else if(item.__ks_type === 'namespace') {
+					return 'namespace';
+				}
+			}
+			else if(typeof item.__ks_enum === 'function') {
+				return 'enum-member';
+			}
 			else if(typeof item.length === 'number') {
 				if(item.callee) {
 					return 'arguments';
@@ -107,7 +117,15 @@ if(/foo/.constructor.name === 'RegExp') {
 			return 'object';
 		}
 		else if(type === 'function') {
-			return Type.isConstructor(item) ? 'constructor' : 'function';
+			if(Type.isConstructor(item)) {
+				return 'constructor';
+			}
+			else if(item.__ks_type === 'enum') {
+				return 'enum';
+			}
+			else {
+				return 'function';
+			}
 		}
 		else {
 			return type;
@@ -142,6 +160,17 @@ else {
 					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
 				}
 			}
+			else if(item.__ks_type) {
+				if(item.__ks_type === 'enum') {
+					return 'enum';
+				}
+				else if(item.__ks_type === 'namespace') {
+					return 'namespace';
+				}
+			}
+			else if(typeof item.__ks_enum === 'function') {
+				return 'enum-member';
+			}
 			else if(typeof item.length === 'number') {
 				if(item.callee) {
 					return 'arguments';
@@ -157,7 +186,15 @@ else {
 			return 'object';
 		}
 		else if(type === 'function') {
-			return Type.isConstructor(item) ? 'constructor' : 'function';
+			if(Type.isConstructor(item)) {
+				return 'constructor';
+			}
+			else if(item.__ks_type === 'enum') {
+				return 'enum';
+			}
+			else {
+				return 'function';
+			}
 		}
 		else {
 			return type;
@@ -327,6 +364,45 @@ var Helper = {
 			return self.apply(bind, [].concat(args, Array.prototype.slice.call(arguments)));
 		};
 	}, // }}}
+	enum: function(master, elements) { // {{{
+		var e = function(val) {
+			var n = new master(val);
+			Object.defineProperty(n, '__ks_enum', {
+				value: e
+			});
+			Object.defineProperty(n, 'value', {
+				value: val
+			});
+			e.__ks_members[val] = n;
+			return n;
+		};
+
+		Object.defineProperty(e, '__ks_type', {
+			value: 'enum'
+		});
+		Object.defineProperty(e, '__ks_members', {
+			value: {}
+		});
+		Object.defineProperty(e, 'from', {
+			value: function(value) {
+				if(!Type.isValue(value)) {
+					return null
+				}
+				else if(Type.isEnumMember(value, e)) {
+					return value;
+				}
+				else {
+					return e.__ks_members[value] || null;
+				}
+			}
+		});
+
+		for(var key in elements) {
+			e[key] = e(elements[key]);
+		}
+
+		return e;
+	}, // }}}
 	isEmptyObject: function(value) { // {{{
 		if(Type.typeOf(value) !== 'object') {
 			return false;
@@ -470,6 +546,13 @@ var Helper = {
 
 		return map;
 	}, // }}}
+	namespace: function(fn) { // {{{
+		var n = fn();
+		Object.defineProperty(n, '__ks_type', {
+			value: 'namespace'
+		});
+		return n;
+	}, // }}}
 	newArrayRange: function(start, stop, step, from, to) { // {{{
 		if(start <= stop) {
 			if(((stop - start) / step) > 100) {
@@ -539,6 +622,14 @@ var Helper = {
 		}
 
 		return map;
+	}, // }}}
+	valueOf: function(value) { // {{{
+		if(Type.isValue(value)) {
+			return value.valueOf();
+		}
+		else {
+			return null;
+		}
 	}, // }}}
 	vcurry: function(self, bind) { // {{{
 		var args = Array.prototype.slice.call(arguments, 2, arguments.length);
