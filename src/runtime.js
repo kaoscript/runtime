@@ -623,6 +623,24 @@ var Helper = {
 
 		return map;
 	}, // }}}
+	try: function(fn, defaultValue) { // {{{
+		try {
+			return fn();
+		}
+		catch(e) {
+			return defaultValue;
+		}
+	}, // }}}
+	tryTest: function(fn) { // {{{
+		try {
+			fn();
+
+			return true;
+		}
+		catch(e) {
+			return false;
+		}
+	}, // }}}
 	valueOf: function(value) { // {{{
 		if(Type.isValue(value)) {
 			return value.valueOf();
