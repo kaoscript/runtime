@@ -29,6 +29,9 @@ var Type = {
 
 		return Object.getOwnPropertyNames(item.prototype).length > 1;
 	}, // }}}
+	isDictionary: function(item) { // {{{
+		return Type.typeOf(item) === 'dictionary';
+	}, // }}}
 	isEnum: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'enum';
 	}, // }}}
@@ -36,7 +39,7 @@ var Type = {
 		return Type.isValue(item) && item.__ks_enum === type;
 	}, // }}}
 	isEnumerable: function(item) { // {{{
-		return item !== null && typeof(item) === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
+		return item !== null && typeof item === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
 	}, // }}}
 	isFunction: function(item) { // {{{
 		return typeof item === 'function';
@@ -49,9 +52,6 @@ var Type = {
 	}, // }}}
 	isNumber: function(item) { // {{{
 		return typeof item === 'number' || item instanceof Number;
-	}, // }}}
-	isObject: function(item) { // {{{
-		return Type.typeOf(item) === 'object';
 	}, // }}}
 	isPrimitive: function(item) { // {{{
 		var type = typeof item;
@@ -67,7 +67,7 @@ var Type = {
 
 if(/foo/.constructor.name === 'RegExp') {
 	Type.isRegExp = function(item) { // {{{
-		return item !== null && typeof item === 'object' && item.constructor.name === 'RegExp';
+		return item !== null && typeof item === 'object' && item.constructor && item.constructor.name === 'RegExp';
 	}; // }}}
 
 	Type.typeOf = function(item) { // {{{
@@ -76,6 +76,9 @@ if(/foo/.constructor.name === 'RegExp') {
 		if(type === 'object') {
 			if(item === null) {
 				return 'null';
+			}
+			else if(!item.constructor) {
+				return 'dictionary';
 			}
 			else if(item.constructor.name === 'Date') {
 				return 'date';
@@ -114,7 +117,7 @@ if(/foo/.constructor.name === 'RegExp') {
 				}
 			}
 
-			return 'object';
+			return 'dictionary';
 		}
 		else if(type === 'function') {
 			if(Type.isConstructor(item)) {
@@ -183,7 +186,7 @@ else {
 				}
 			}
 
-			return 'object';
+			return 'dictionary';
 		}
 		else if(type === 'function') {
 			if(Type.isConstructor(item)) {
@@ -313,8 +316,8 @@ var Helper = {
 
 		return clazz;
 	}, // }}}
-	concatObject: function() { // {{{
-		var to = {};
+	concatDictionary: function() { // {{{
+		var to = new Dictionary();
 
 		var src, keys, k, l, key, descriptor
 		for(var i = 0; i < arguments.length; i++) {
@@ -403,8 +406,8 @@ var Helper = {
 
 		return e;
 	}, // }}}
-	isEmptyObject: function(value) { // {{{
-		if(Type.typeOf(value) !== 'object') {
+	isEmptyDictionary: function(value) { // {{{
+		if(Type.typeOf(value) !== 'dictionary') {
 			return false;
 		}
 
@@ -432,19 +435,19 @@ var Helper = {
 
 		return map;
 	}, // }}}
-	mapObject: function(object, iterator, condition) { // {{{
+	mapDictionary: function(dict, iterator, condition) { // {{{
 		var map = [];
 
 		if(condition) {
-			for(var key in object) {
-				if(condition(key, object[key])) {
-					map.push(iterator(key, object[key]));
+			for(var key in dict) {
+				if(condition(key, dict[key])) {
+					map.push(iterator(key, dict[key]));
 				}
 			}
 		}
 		else {
-			for(var key in object) {
-				map.push(iterator(key, object[key]));
+			for(var key in dict) {
+				map.push(iterator(key, dict[key]));
 			}
 		}
 
@@ -804,6 +807,26 @@ var Operator = {
 
 		return result;
 	}, // }}}
+	eq: function(x, y) { // {{{
+		if(typeof x === typeof y) {
+			return x === y
+		}
+		else {
+			return false
+		}
+	}, // }}}
+	gt: function(x, y) { // {{{
+		return $check(x, 'gt') > $check(y, 'gt');
+	}, // }}}
+	gte: function(x, y) { // {{{
+		return $check(x, 'gte') >= $check(y, 'gte');
+	}, // }}}
+	lt: function(x, y) { // {{{
+		return $check(x, 'lt') < $check(y, 'lt');
+	}, // }}}
+	lte: function(x, y) { // {{{
+		return $check(x, 'lte') <= $check(y, 'lte');
+	}, // }}}
 	modulo: function() { // {{{
 		if(!Type.isValue(arguments[0])) {
 			return null
@@ -845,6 +868,14 @@ var Operator = {
 
 		return -$check(value, 'negative');
 	}, // }}}
+	neq: function(x, y) { // {{{
+		if(typeof x === typeof y) {
+			return x !== y
+		}
+		else {
+			return true
+		}
+	}, // }}}
 	quotient: function() { // {{{
 		if(!Type.isValue(arguments[0])) {
 			return null
@@ -881,6 +912,10 @@ var Operator = {
 	} // }}}
 }
 
+var Dictionary = function() {};
+Dictionary.prototype = Object.create(null);
+Dictionary.keys = Object.keys;
+
 try {
 	eval('class $$ {}');
 
@@ -891,6 +926,7 @@ try {
 catch(e) {}
 
 module.exports = {
+	Dictionary: Dictionary,
 	Helper: Helper,
 	Operator: Operator,
 	Type: Type
