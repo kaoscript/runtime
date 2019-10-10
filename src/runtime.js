@@ -36,7 +36,12 @@ var Type = {
 		return Type.isValue(item) && item.__ks_type === 'enum';
 	}, // }}}
 	isEnumMember: function(item, type) { // {{{
-		return Type.isValue(item) && item.__ks_enum === type;
+		if(type) {
+			return Type.isValue(item) && item.__ks_enum === type;
+		}
+		else {
+			return Type.isValue(item) && !!item.__ks_enum;
+		}
 	}, // }}}
 	isEnumerable: function(item) { // {{{
 		return item !== null && typeof item === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
