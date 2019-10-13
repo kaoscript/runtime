@@ -58,6 +58,9 @@ var Type = {
 	isNumber: function(item) { // {{{
 		return typeof item === 'number' || item instanceof Number;
 	}, // }}}
+	isObject: function(item) { // {{{
+		return Type.typeOf(item) === 'object';
+	}, // }}}
 	isPrimitive: function(item) { // {{{
 		var type = typeof item;
 		return type === 'string' || type === 'number' || type === 'boolean';
@@ -72,7 +75,7 @@ var Type = {
 
 if(/foo/.constructor.name === 'RegExp') {
 	Type.isRegExp = function(item) { // {{{
-		return item !== null && typeof item === 'object' && item.constructor && item.constructor.name === 'RegExp';
+		return item !== null && typeof item === 'object' && !!item.constructor && item.constructor.name === 'RegExp';
 	}; // }}}
 
 	Type.typeOf = function(item) { // {{{
@@ -82,7 +85,7 @@ if(/foo/.constructor.name === 'RegExp') {
 			if(item === null) {
 				return 'null';
 			}
-			else if(!item.constructor) {
+			else if(!item.constructor || item instanceof Dictionary) {
 				return 'dictionary';
 			}
 			else if(item.constructor.name === 'Date') {
@@ -122,7 +125,7 @@ if(/foo/.constructor.name === 'RegExp') {
 				}
 			}
 
-			return 'dictionary';
+			return 'object';
 		}
 		else if(type === 'function') {
 			if(Type.isConstructor(item)) {
@@ -153,6 +156,9 @@ else {
 
 			if(item === null) {
 				return 'null';
+			}
+			else if(item instanceof Dictionary) {
+				return 'dictionary';
 			}
 			else if(name === '[object Date]') {
 				return 'date';
@@ -191,7 +197,7 @@ else {
 				}
 			}
 
-			return 'dictionary';
+			return 'object';
 		}
 		else if(type === 'function') {
 			if(Type.isConstructor(item)) {
