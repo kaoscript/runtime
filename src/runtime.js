@@ -50,7 +50,23 @@ var Type = {
 		return typeof item === 'function';
 	}, // }}}
 	isInstance: function(item, type) { // {{{
-		return item instanceof type;
+		if(!item) {
+			return false;
+		}
+
+		var constructor = item.constructor;
+		if(!constructor) {
+			return false
+		}
+
+		do {
+			if(constructor === type) {
+				return true;
+			}
+		}
+		while((constructor = constructor.super));
+
+		return false
 	}, // }}}
 	isNamespace: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'namespace';
@@ -88,19 +104,8 @@ if(/foo/.constructor.name === 'RegExp') {
 			else if(!item.constructor || item instanceof Dictionary) {
 				return 'dictionary';
 			}
-			else if(item.constructor.name === 'Date') {
-				return 'date';
-			}
-			else if(item.constructor.name === 'RegExp') {
-				return 'regex';
-			}
-			else if(item.nodeName) {
-				if(item.nodeType === 1) {
-					return 'element';
-				}
-				if(item.nodeType === 3) {
-					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
-				}
+			else if(item.constructor.name === 'Array') {
+				return 'array';
 			}
 			else if(item.__ks_type) {
 				if(item.__ks_type === 'enum') {
@@ -112,17 +117,6 @@ if(/foo/.constructor.name === 'RegExp') {
 			}
 			else if(typeof item.__ks_enum === 'function') {
 				return 'enum-member';
-			}
-			else if(typeof item.length === 'number') {
-				if(item.callee) {
-					return 'arguments';
-				}
-				else if(item['item']) {
-					return 'collection';
-				}
-				else {
-					return 'array';
-				}
 			}
 
 			return 'object';
@@ -157,22 +151,11 @@ else {
 			if(item === null) {
 				return 'null';
 			}
-			else if(item instanceof Dictionary) {
+			else if(name === '[object Dictionary]') {
 				return 'dictionary';
 			}
-			else if(name === '[object Date]') {
-				return 'date';
-			}
-			else if(name === '[object RegExp]') {
-				return 'regex';
-			}
-			else if(item.nodeName) {
-				if(item.nodeType === 1) {
-					return 'element';
-				}
-				if(item.nodeType === 3) {
-					return (/\S/).test(item.nodeValue) ? 'textnode' : 'whitespace';
-				}
+			else if(name === '[object Array]') {
+				return 'array';
 			}
 			else if(item.__ks_type) {
 				if(item.__ks_type === 'enum') {
@@ -184,17 +167,6 @@ else {
 			}
 			else if(typeof item.__ks_enum === 'function') {
 				return 'enum-member';
-			}
-			else if(typeof item.length === 'number') {
-				if(item.callee) {
-					return 'arguments';
-				}
-				else if(item['item']) {
-					return 'collection';
-				}
-				else {
-					return 'array';
-				}
 			}
 
 			return 'object';
@@ -933,6 +905,10 @@ try {
 	$support.class = true;
 
 	Helper.create = eval('(function(){return function(clazz,args){return new clazz(...args)}})()')
+
+	Type.isInstance = function(item, type) { // {{{
+		return item instanceof type;
+	}; // }}}
 }
 catch(e) {}
 
