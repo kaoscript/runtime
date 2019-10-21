@@ -299,6 +299,17 @@ var Helper = {
 
 		return clazz;
 	}, // }}}
+	compareString: function(a, b) { // {{{
+		if(a === b) {
+			return 0;
+		}
+		else if(a < b) {
+			return -1;
+		}
+		else {
+			return 1;
+		}
+	}, // }}}
 	concatDictionary: function() { // {{{
 		var to = new Dictionary();
 
