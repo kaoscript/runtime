@@ -923,9 +923,17 @@ try {
 }
 catch(e) {}
 
+var initFlag = '__ks_init';
+
+try {
+	initFlag = Symbol('init');
+}
+catch(e) {}
+
 module.exports = {
 	Dictionary: Dictionary,
 	Helper: Helper,
 	Operator: Operator,
-	Type: Type
+	Type: Type,
+	initFlag: initFlag
 };
