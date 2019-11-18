@@ -84,6 +84,17 @@ var Type = {
 	isString: function(item) { // {{{
 		return typeof item === 'string' || item instanceof String;
 	}, // }}}
+	isStruct: function(item) { // {{{
+		return Type.isValue(item) && item.__ks_type === 'struct';
+	}, // }}}
+	isStructInstance: function(item, type) { // {{{
+		if(type) {
+			return Type.isValue(item) && item.__ks_struct === type;
+		}
+		else {
+			return Type.isValue(item) && !!item.__ks_struct;
+		}
+	}, // }}}
 	isValue: function(item) { // {{{
 		return item !== void 0 && item !== null;
 	} // }}}
@@ -101,21 +112,19 @@ if(/foo/.constructor.name === 'RegExp') {
 			if(item === null) {
 				return 'null';
 			}
+			else if(!!item.__ks_struct) {
+				return 'struct-instance';
+			}
 			else if(!item.constructor || item instanceof Dictionary) {
 				return 'dictionary';
 			}
 			else if(item.constructor.name === 'Array') {
 				return 'array';
 			}
-			else if(item.__ks_type) {
-				if(item.__ks_type === 'enum') {
-					return 'enum';
-				}
-				else if(item.__ks_type === 'namespace') {
-					return 'namespace';
-				}
+			else if(!!item.__ks_type) {
+				return item.__ks_type;
 			}
-			else if(typeof item.__ks_enum === 'function') {
+			else if(!!item.__ks_enum) {
 				return 'enum-member';
 			}
 
@@ -125,8 +134,8 @@ if(/foo/.constructor.name === 'RegExp') {
 			if(Type.isConstructor(item)) {
 				return 'constructor';
 			}
-			else if(item.__ks_type === 'enum') {
-				return 'enum';
+			else if(!!item.__ks_type) {
+				return item.__ks_type;
 			}
 			else {
 				return 'function';
@@ -151,21 +160,19 @@ else {
 			if(item === null) {
 				return 'null';
 			}
+			else if(!!item.__ks_struct) {
+				return 'struct-instance';
+			}
 			else if(name === '[object Dictionary]') {
 				return 'dictionary';
 			}
 			else if(name === '[object Array]') {
 				return 'array';
 			}
-			else if(item.__ks_type) {
-				if(item.__ks_type === 'enum') {
-					return 'enum';
-				}
-				else if(item.__ks_type === 'namespace') {
-					return 'namespace';
-				}
+			else if(!!item.__ks_type) {
+				return item.__ks_type;
 			}
-			else if(typeof item.__ks_enum === 'function') {
+			else if(!!item.__ks_enum) {
 				return 'enum-member';
 			}
 
@@ -175,8 +182,8 @@ else {
 			if(Type.isConstructor(item)) {
 				return 'constructor';
 			}
-			else if(item.__ks_type === 'enum') {
-				return 'enum';
+			else if(!!item.__ks_type) {
+				return item.__ks_type;
 			}
 			else {
 				return 'function';
@@ -619,6 +626,21 @@ var Helper = {
 		}
 
 		return map;
+	}, // }}}
+	struct: function(make) { // {{{
+		var s = function() {
+			var v = make.apply(null, arguments);
+			Object.defineProperty(v, '__ks_struct', {
+				value: s
+			});
+			return v;
+		};
+
+		Object.defineProperty(s, '__ks_type', {
+			value: 'struct'
+		});
+
+		return s;
 	}, // }}}
 	try: function(fn, defaultValue) { // {{{
 		try {
