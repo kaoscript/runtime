@@ -36,7 +36,7 @@ var Type = {
 		return Type.isValue(item) && item.__ks_type === 'enum';
 	}, // }}}
 	isEnumMember: function(item, type) { // {{{
-		if(type) {
+		if(arguments.length > 1) {
 			return Type.isValue(item) && item.__ks_enum === type;
 		}
 		else {
@@ -88,8 +88,8 @@ var Type = {
 		return Type.isValue(item) && item.__ks_type === 'struct';
 	}, // }}}
 	isStructInstance: function(item, type) { // {{{
-		if(type) {
-			return Type.isValue(item) && item.__ks_struct === type;
+		if(arguments.length > 1) {
+			return Type.isValue(item) && !!item.__ks_struct && item.__ks_struct.indexOf(type) != -1;
 		}
 		else {
 			return Type.isValue(item) && !!item.__ks_struct;
@@ -132,7 +132,7 @@ if(/foo/.constructor.name === 'RegExp') {
 		}
 		else if(type === 'function') {
 			if(Type.isConstructor(item)) {
-				return 'constructor';
+				return 'class';
 			}
 			else if(!!item.__ks_type) {
 				return item.__ks_type;
@@ -180,7 +180,7 @@ else {
 		}
 		else if(type === 'function') {
 			if(Type.isConstructor(item)) {
-				return 'constructor';
+				return 'class';
 			}
 			else if(!!item.__ks_type) {
 				return item.__ks_type;
@@ -627,17 +627,23 @@ var Helper = {
 
 		return map;
 	}, // }}}
-	struct: function(make) { // {{{
+	struct: function(builder, master) { // {{{
 		var s = function() {
-			var v = make.apply(null, arguments);
+			var v = builder.apply(null, arguments);
 			Object.defineProperty(v, '__ks_struct', {
-				value: s
+				value: s.__ks_inheritance
 			});
 			return v;
 		};
 
 		Object.defineProperty(s, '__ks_type', {
 			value: 'struct'
+		});
+		Object.defineProperty(s, '__ks_inheritance', {
+			value: [s].concat(!!master ? master.__ks_inheritance : [])
+		});
+		Object.defineProperty(s, '__ks_builder', {
+			value: builder
 		});
 
 		return s;
