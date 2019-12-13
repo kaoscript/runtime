@@ -18,38 +18,7 @@ var Type = {
 	isBoolean: function(item) { // {{{
 		return typeof item === 'boolean' || item instanceof Boolean;
 	}, // }}}
-	isConstructor: function(item) { // {{{
-		if(typeof item !== 'function' || !item.prototype) {
-			return false;
-		}
-
-		for(var name in item.prototype) {
-			return true;
-		}
-
-		return Object.getOwnPropertyNames(item.prototype).length > 1;
-	}, // }}}
-	isDictionary: function(item) { // {{{
-		return Type.typeOf(item) === 'dictionary';
-	}, // }}}
-	isEnum: function(item) { // {{{
-		return Type.isValue(item) && item.__ks_type === 'enum';
-	}, // }}}
-	isEnumMember: function(item, type) { // {{{
-		if(arguments.length > 1) {
-			return Type.isValue(item) && item.__ks_enum === type;
-		}
-		else {
-			return Type.isValue(item) && !!item.__ks_enum;
-		}
-	}, // }}}
-	isEnumerable: function(item) { // {{{
-		return item !== null && typeof item === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
-	}, // }}}
-	isFunction: function(item) { // {{{
-		return typeof item === 'function';
-	}, // }}}
-	isInstance: function(item, type) { // {{{
+	isClassInstance: function(item, type) { // {{{
 		if(!item) {
 			return false;
 		}
@@ -67,6 +36,37 @@ var Type = {
 		while((constructor = constructor.super));
 
 		return false
+	}, // }}}
+	isConstructor: function(item) { // {{{
+		if(typeof item !== 'function' || !item.prototype) {
+			return false;
+		}
+
+		for(var name in item.prototype) {
+			return true;
+		}
+
+		return Object.getOwnPropertyNames(item.prototype).length > 1;
+	}, // }}}
+	isDictionary: function(item) { // {{{
+		return Type.typeOf(item) === 'dictionary';
+	}, // }}}
+	isEnum: function(item) { // {{{
+		return Type.isValue(item) && item.__ks_type === 'enum';
+	}, // }}}
+	isEnumInstance: function(item, type) { // {{{
+		if(arguments.length > 1) {
+			return Type.isValue(item) && item.__ks_enum === type;
+		}
+		else {
+			return Type.isValue(item) && !!item.__ks_enum;
+		}
+	}, // }}}
+	isEnumerable: function(item) { // {{{
+		return item !== null && typeof item === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
+	}, // }}}
+	isFunction: function(item) { // {{{
+		return typeof item === 'function';
 	}, // }}}
 	isNamespace: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'namespace';
@@ -210,6 +210,27 @@ var Helper = {
 		}
 		else {
 			return [value];
+		}
+	}, // }}}
+	cast: function(value, type, nullable) { // {{{
+		for(var i = 3; i < arguments.length; i += 2) {
+			if(arguments[i] == null) {
+				if(Type['is' + arguments[i + 1]](value)) {
+					return value;
+				}
+			}
+			else {
+				if(Type['is' + arguments[i + 1] + 'Instance'](value, arguments[i])) {
+					return value;
+				}
+			}
+		}
+
+		if(nullable) {
+			return null;
+		}
+		else {
+			throw new TypeError('The given value can\'t be casted as a "' + type + '"');
 		}
 	}, // }}}
 	class: function(api) { // {{{
@@ -392,7 +413,7 @@ var Helper = {
 				if(!Type.isValue(value)) {
 					return null
 				}
-				else if(Type.isEnumMember(value, e)) {
+				else if(Type.isEnumInstance(value, e)) {
 					return value;
 				}
 				else {
@@ -626,6 +647,14 @@ var Helper = {
 		}
 
 		return map;
+	}, // }}}
+	notNull: function(value) { // {{{
+		if(Type.isValue(value)) {
+			return value
+		}
+		else {
+			throw new TypeError('The given value can\'t be null');
+		}
 	}, // }}}
 	struct: function(builder, master) { // {{{
 		var s = function() {
@@ -945,7 +974,7 @@ try {
 
 	Helper.create = eval('(function(){return function(clazz,args){return new clazz(...args)}})()')
 
-	Type.isInstance = function(item, type) { // {{{
+	Type.isClassInstance = function(item, type) { // {{{
 		return item instanceof type;
 	}; // }}}
 }
