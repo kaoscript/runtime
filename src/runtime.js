@@ -677,6 +677,14 @@ var Helper = {
 
 		return s;
 	}, // }}}
+	toString: function(value) { // {{{
+		if(value === void 0 || value === null) {
+			return '';
+		}
+		else {
+			return '' + value;
+		}
+	}, // }}}
 	try: function(fn, defaultValue) { // {{{
 		try {
 			return fn();
