@@ -974,6 +974,7 @@ var Operator = {
 var Dictionary = function() {};
 Dictionary.prototype = Object.create(null);
 Dictionary.keys = Object.keys;
+Dictionary.values = Object.values;
 
 try {
 	eval('class $$ {}');
