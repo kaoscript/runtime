@@ -95,6 +95,17 @@ var Type = {
 			return Type.isValue(item) && !!item.__ks_struct;
 		}
 	}, // }}}
+	isTuple: function(item) { // {{{
+		return Type.isValue(item) && item.__ks_type === 'tuple';
+	}, // }}}
+	isTupleInstance: function(item, type) { // {{{
+		if(arguments.length > 1) {
+			return Type.isValue(item) && !!item.__ks_tuple && item.__ks_tuple.indexOf(type) != -1;
+		}
+		else {
+			return Type.isValue(item) && !!item.__ks_tuple;
+		}
+	}, // }}}
 	isValue: function(item) { // {{{
 		return item !== void 0 && item !== null;
 	} // }}}
@@ -114,6 +125,9 @@ if(/foo/.constructor.name === 'RegExp') {
 			}
 			else if(!!item.__ks_struct) {
 				return 'struct-instance';
+			}
+			else if(!!item.__ks_tuple) {
+				return 'tuple-instance';
 			}
 			else if(!item.constructor || item instanceof Dictionary) {
 				return 'dictionary';
@@ -162,6 +176,9 @@ else {
 			}
 			else if(!!item.__ks_struct) {
 				return 'struct-instance';
+			}
+			else if(!!item.__ks_tuple) {
+				return 'tuple-instance';
 			}
 			else if(name === '[object Dictionary]') {
 				return 'dictionary';
@@ -702,6 +719,27 @@ var Helper = {
 		catch(e) {
 			return false;
 		}
+	}, // }}}
+	tuple: function(builder, master) { // {{{
+		var s = function() {
+			var v = builder.apply(null, arguments);
+			Object.defineProperty(v, '__ks_tuple', {
+				value: s.__ks_inheritance
+			});
+			return v;
+		};
+
+		Object.defineProperty(s, '__ks_type', {
+			value: 'tuple'
+		});
+		Object.defineProperty(s, '__ks_inheritance', {
+			value: [s].concat(!!master ? master.__ks_inheritance : [])
+		});
+		Object.defineProperty(s, '__ks_builder', {
+			value: builder
+		});
+
+		return s;
 	}, // }}}
 	valueOf: function(value) { // {{{
 		if(Type.isValue(value)) {
