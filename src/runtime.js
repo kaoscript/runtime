@@ -1006,6 +1006,22 @@ var Operator = {
 		}
 
 		return result;
+	}, // }}}
+	xor: function() { // {{{
+		let result = false;
+
+		for(var i = 0; i < arguments.length; i++) {
+			if(arguments[i]) {
+				if(result) {
+					return false;
+				}
+				else {
+					result = true;
+				}
+			}
+		}
+
+		return result;
 	} // }}}
 }
 
