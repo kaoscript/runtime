@@ -1008,7 +1008,7 @@ var Operator = {
 		return result;
 	}, // }}}
 	xor: function() { // {{{
-		let result = false;
+		var result = false;
 
 		for(var i = 0; i < arguments.length; i++) {
 			if(arguments[i]) {
