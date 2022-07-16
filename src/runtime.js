@@ -18,6 +18,9 @@ var Type = {
 	isBoolean: function(item) { // {{{
 		return typeof item === 'boolean' || item instanceof Boolean;
 	}, // }}}
+	isBigInt: function(item) { // {{{
+		return typeof item === 'bigint' || item instanceof BigInt;
+	}, // }}}
 	isClassInstance: function(item, type) { // {{{
 		if(!item) {
 			return false;
@@ -51,6 +54,10 @@ var Type = {
 	isDictionary: function(item) { // {{{
 		return Type.typeOf(item) === 'dictionary';
 	}, // }}}
+	isDestructurableObject: function(item) { // {{{
+		var type = Type.typeOf(item);
+		return type === 'struct-instance' || type === 'dictionary' || type === 'object';
+	}, // }}}
 	isEnum: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'enum';
 	}, // }}}
@@ -70,6 +77,9 @@ var Type = {
 	}, // }}}
 	isNamespace: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'namespace';
+	}, // }}}
+	isNull: function(item) { // {{{
+		return item === void 0 || item === null;
 	}, // }}}
 	isNumber: function(item) { // {{{
 		return typeof item === 'number' || item instanceof Number;
@@ -108,6 +118,25 @@ var Type = {
 	}, // }}}
 	isValue: function(item) { // {{{
 		return item !== void 0 && item !== null;
+	}, // }}}
+	isVarargs(args, from, to, def, test) { // {{{
+		var l = to < 0 ? args.length + to : Math.min(to, args.length - 1);
+
+		var i = from;
+
+		if(def && i < l && !Type.isValue(args[i])) {
+			++i;
+		}
+
+		while(i <= l) {
+			if(!test(args[i])) {
+				return false;
+			}
+
+			++i;
+		}
+
+		return true;
 	} // }}}
 };
 
@@ -229,6 +258,30 @@ var Helper = {
 			return [value];
 		}
 	}, // }}}
+	badArgs: function() { // {{{
+		return new TypeError('Invalid arguments');
+	}, // }}}
+	bindMethod: function(bind, name) { // {{{
+		var proto = bind.constructor.prototype;
+		var fn = proto[name];
+
+		if(!fn['__ks_0']) {
+			var match = '__ks_func_' + name + '_';
+			var mLength = match.length;
+			var props = Object.getOwnPropertyNames(proto);
+
+			for(var i = 0, l = props.length; i < l; ++i) {
+				if(props[i].substring(0, mLength) === match) {
+					var index = props[i].substring(mLength);
+					if(index !== 'rt') {
+						fn['__ks_' + index] = proto[props[i]];
+					}
+				}
+			}
+		}
+
+		return fn.bind(bind);
+	}, // }}}
 	cast: function(value, type, nullable) { // {{{
 		for(var i = 3; i < arguments.length; i += 2) {
 			if(arguments[i] == null) {
@@ -291,7 +344,7 @@ var Helper = {
 
 			clazz.super = api.$extends;
 
-			for(key in api.$extends) {
+			for(var key in api.$extends) {
 				if(!clazz[key]) {
 					clazz[key] = api.$extends[key];
 				}
@@ -408,6 +461,10 @@ var Helper = {
 	}, // }}}
 	enum: function(master, elements) { // {{{
 		var e = function(val) {
+			if(val.__ks_enum === e) {
+				return val;
+			}
+
 			var n = new master(val);
 			Object.defineProperty(n, '__ks_enum', {
 				value: e
@@ -425,7 +482,7 @@ var Helper = {
 		Object.defineProperty(e, '__ks_members', {
 			value: {}
 		});
-		Object.defineProperty(e, 'from', {
+		Object.defineProperty(e, '__ks_from', {
 			value: function(value) {
 				if(!Type.isValue(value)) {
 					return null
@@ -455,6 +512,40 @@ var Helper = {
 		}
 
 		return true;
+	}, // }}}
+	isUsingAllArgs: function(args, pts, index) { // {{{
+		return pts[index] === args.length
+	}, // }}}
+	isVarargs: function(args, min, max, test, pts, index) { // {{{
+		var f = pts[index];
+		var l = Math.min(f + max, args.length);
+		var i = f;
+
+		while(i < l && test(args[i])) {
+			++i;
+		}
+
+		if(i - f >= min) {
+			pts[index + 1] = i;
+
+			return true;
+		}
+		else {
+			pts[index + 1] = f;
+
+			return false;
+		}
+	}, // }}}
+	getVarargs: function(args, start, end) { // {{{
+		return Array.from(args).slice(start, end)
+	}, // }}}
+	getVararg: function(args, start, end) { // {{{
+		if(start < end) {
+			return args[start];
+		}
+		else {
+			return void 0;
+		}
 	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
 		var map = [];
@@ -673,11 +764,12 @@ var Helper = {
 			throw new TypeError('The given value can\'t be null');
 		}
 	}, // }}}
-	struct: function(builder, master) { // {{{
+	struct: function(creator, router, master) { // {{{
 		var s = function() {
-			var v = builder.apply(null, arguments);
+			var v = router.call(null, creator, arguments);
 			Object.defineProperty(v, '__ks_struct', {
-				value: s.__ks_inheritance
+				value: s.__ks_inheritance,
+				configurable: true
 			});
 			return v;
 		};
@@ -688,8 +780,8 @@ var Helper = {
 		Object.defineProperty(s, '__ks_inheritance', {
 			value: [s].concat(!!master ? master.__ks_inheritance : [])
 		});
-		Object.defineProperty(s, '__ks_builder', {
-			value: builder
+		Object.defineProperty(s, '__ks_new', {
+			value: s
 		});
 
 		return s;
@@ -720,9 +812,9 @@ var Helper = {
 			return false;
 		}
 	}, // }}}
-	tuple: function(builder, master) { // {{{
+	tuple: function(creator, router, master) { // {{{
 		var s = function() {
-			var v = builder.apply(null, arguments);
+			var v = router.call(null, creator, arguments);
 			Object.defineProperty(v, '__ks_tuple', {
 				value: s.__ks_inheritance
 			});
@@ -735,15 +827,18 @@ var Helper = {
 		Object.defineProperty(s, '__ks_inheritance', {
 			value: [s].concat(!!master ? master.__ks_inheritance : [])
 		});
-		Object.defineProperty(s, '__ks_builder', {
-			value: builder
+		Object.defineProperty(s, '__ks_new', {
+			value: s
 		});
 
 		return s;
 	}, // }}}
 	valueOf: function(value) { // {{{
-		if(Type.isValue(value)) {
-			return value.valueOf();
+		if(Type.isEnumInstance(value)) {
+			return value.value;
+		}
+		else if(Type.isValue(value)) {
+			return value.valueOf ? value.valueOf() : value;
 		}
 		else {
 			return null;
@@ -758,7 +853,7 @@ var Helper = {
 };
 
 function $check(v, op) { // {{{
-	if(!Type.isNumber(v)) {
+	if(!(Type.isNumber(v) || Type.isBigInt(v))) {
 		throw new TypeError('The elements of a ' + op + ' must be numbers');
 	}
 
