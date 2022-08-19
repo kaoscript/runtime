@@ -11,9 +11,48 @@ var $support = {
 	class: false
 }
 
+var $isArray = Array.isArray || function(item) { // {{{
+	return Type.typeOf(item) === 'array';
+}; // }}}
+
 var Type = {
-	isArray: Array.isArray || function(item) { // {{{
-		return Type.typeOf(item) === 'array';
+	isArray: function(item, rest, props) { // {{{
+		if(!$isArray(item)) {
+			return false;
+		}
+
+		// if(rest) {
+		// 	if(props) {
+		// 		for(var i = 0, l = item.length; i < l; ++i) {
+		// 			if(props[i]) {
+		// 				if(!props[i](item[i])) {
+		// 					return false
+		// 				}
+		// 			}
+		// 			else {
+		// 				if(!rest(item[i])) {
+		// 					return false
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// 	else {
+		// 		for(var i = 0, l = item.length; i < l; ++i) {
+		// 			if(!rest(item[i])) {
+		// 				return false
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// else if(props) {
+		// 	for(var i = 0, l = item.length; i < l; ++i) {
+		// 		if(!props[i](item[i])) {
+		// 			return false
+		// 		}
+		// 	}
+		// }
+
+		return true;
 	}, // }}}
 	isBoolean: function(item) { // {{{
 		return typeof item === 'boolean' || item instanceof Boolean;
@@ -51,8 +90,43 @@ var Type = {
 
 		return Object.getOwnPropertyNames(item.prototype).length > 1;
 	}, // }}}
-	isDictionary: function(item) { // {{{
-		return Type.typeOf(item) === 'dictionary';
+	isDictionary: function(item, rest, props) { // {{{
+		if(Type.typeOf(item) !== 'dictionary') {
+			return false;
+		}
+
+		// if(rest) {
+		// 	if(props) {
+		// 		for(var key in item) {
+		// 			if(props[key]) {
+		// 				if(!props[key](item[key])) {
+		// 					return false
+		// 				}
+		// 			}
+		// 			else {
+		// 				if(!rest(item[key])) {
+		// 					return false
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// 	else {
+		// 		for(var key in item) {
+		// 			if(!rest(item[key])) {
+		// 				return false
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// else if(props) {
+		// 	for(var key in props) {
+		// 		if(!props[key](item[key])) {
+		// 			return false
+		// 		}
+		// 	}
+		// }
+
+		return true;
 	}, // }}}
 	isDestructurableObject: function(item) { // {{{
 		var type = Type.typeOf(item);
@@ -83,6 +157,9 @@ var Type = {
 	}, // }}}
 	isNumber: function(item) { // {{{
 		return typeof item === 'number' || item instanceof Number;
+	}, // }}}
+	isNumeric: function(item) { // {{{
+		return Type.isNumber(item) || Type.isBigInt(item);
 	}, // }}}
 	isObject: function(item) { // {{{
 		return Type.typeOf(item) === 'object';
@@ -852,271 +929,338 @@ var Helper = {
 	} // }}}
 };
 
-function $check(v, op) { // {{{
-	if(!(Type.isNumber(v) || Type.isBigInt(v))) {
-		throw new TypeError('The elements of a ' + op + ' must be numbers');
+function $checkNum(v, op) { // {{{
+	if(Type.isNumeric(v)) {
+		return v
 	}
 
-	return v
+	throw new TypeError('The elements of a "' + op + '" operation must be numbers');
 } // }}}
 
 var Operator = {
-	addOrConcat: function() { // {{{
-		var arg;
+	add: function() { // {{{
 		for(var i = 0; i < arguments.length; i++) {
-			arg = arguments[i];
-
-			if(Type.isString(arg)) {
-				return Helper.concatString.apply(this, arguments);
+			if(Type.isString(arguments[i])) {
+				return Helper.concatString.apply(null, arguments);
 			}
 		}
 
-		return Operator.addition.apply(this, arguments);
+		return Operator.addNum.apply(null, arguments);
 	}, // }}}
-	addition: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+	addNum: function() { // {{{
+		if(Type.isNull(arguments[0])) {
+			return null;
 		}
 
-		var result = $check(arguments[0], 'addition');
+		var result = $checkNum(arguments[0], 'addition');
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result += $check(arguments[i], 'addition');
+			result += $checkNum(arguments[i], 'addition');
 		}
 
 		return result;
 	}, // }}}
-	bitwiseAnd: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+	and: function() { // {{{
+		var args = Array.from(arguments);
+		var res = args.shift();
+
+		if(Type.isNull(res)) {
+			return false;
+		}
+		if(Type.isBoolean(res)) {
+			return res && Operator.andBool.apply(null, args)
+		}
+		if(Type.isNumeric(result)) {
+			return res & Operator.andNum.apply(null, args)
 		}
 
-		var result = $check(arguments[0], 'bitwise-and');
+		throw new TypeError('The elements of a "and" operation must be either booleans or numbers');
+	}, // }}}
+	andBool: function() { // {{{
+		for(var i = 0; i < arguments.length; i++) {
+			if(arguments[i] !== true) {
+				return false;
+			}
+		}
+
+		return true;
+	}, // }}}
+	andNum: function() { // {{{
+		var res = arguments[0];
+
+		if(Type.isNull(res)) {
+			return null;
+		}
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result &= $check(arguments[i], 'bitwise-and');
+			res &= $checkNum(arguments[i], 'and');
 		}
 
-		return result;
-	}, // }}}
-	bitwiseLeftShift: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
-		}
-
-		var result = $check(arguments[0], 'bitwise-left-shift');
-
-		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
-			}
-
-			result <<= $check(arguments[i], 'bitwise-left-shift');
-		}
-
-		return result;
-	}, // }}}
-	bitwiseOr: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
-		}
-
-		var result = $check(arguments[0], 'bitwise-or');
-
-		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
-			}
-
-			result |= $check(arguments[i], 'bitwise-or');
-		}
-
-		return result;
-	}, // }}}
-	bitwiseNot: function(value) { // {{{
-		if(!Type.isValue(value)) {
-			return null
-		}
-
-		return ~$check(value, 'bitwise-not');
-	}, // }}}
-	bitwiseRightShift: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
-		}
-
-		var result = $check(arguments[0], 'bitwise-right-shift');
-
-		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
-			}
-
-			result >>= $check(arguments[i], 'bitwise-right-shift');
-		}
-
-		return result;
-	}, // }}}
-	bitwiseXor: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
-		}
-
-		var result = $check(arguments[0], 'bitwise-xor');
-
-		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
-			}
-
-			result ^= $check(arguments[i], 'bitwise-xor');
-		}
-
-		return result;
+		return res;
 	}, // }}}
 	division: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+		if(Type.isNull(arguments[0])) {
+			return null;
 		}
 
-		var result = $check(arguments[0], 'division');
+		var result = $checkNum(arguments[0], 'division');
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result /= $check(arguments[i], 'division');
+			result /= $checkNum(arguments[i], 'division');
 		}
 
 		return result;
 	}, // }}}
 	eq: function(x, y) { // {{{
 		if(typeof x === typeof y) {
-			return x === y
+			return x === y;
 		}
 		else {
-			return false
+			return false;
 		}
 	}, // }}}
 	gt: function(x, y) { // {{{
-		return $check(x, 'gt') > $check(y, 'gt');
+		return $checkNum(x, 'gt') > $checkNum(y, 'gt');
 	}, // }}}
 	gte: function(x, y) { // {{{
-		return $check(x, 'gte') >= $check(y, 'gte');
+		return $checkNum(x, 'gte') >= $checkNum(y, 'gte');
 	}, // }}}
-	lt: function(x, y) { // {{{
-		return $check(x, 'lt') < $check(y, 'lt');
-	}, // }}}
-	lte: function(x, y) { // {{{
-		return $check(x, 'lte') <= $check(y, 'lte');
-	}, // }}}
-	modulo: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+	leftShift: function() { // {{{
+		if(Type.isNull(arguments[0])) {
+			return null;
 		}
 
-		var result = $check(arguments[0], 'modulo');
+		var result = $checkNum(arguments[0], 'left-shift');
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result %= $check(arguments[i], 'modulo');
+			result <<= $checkNum(arguments[i], 'left-shift');
+		}
+
+		return result;
+	}, // }}}
+	lt: function(x, y) { // {{{
+		return $checkNum(x, 'lt') < $checkNum(y, 'lt');
+	}, // }}}
+	lte: function(x, y) { // {{{
+		return $checkNum(x, 'lte') <= $checkNum(y, 'lte');
+	}, // }}}
+	modulo: function() { // {{{
+		if(Type.isNull(arguments[0])) {
+			return null;
+		}
+
+		var result = $checkNum(arguments[0], 'modulo');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(Type.isNull(arguments[i])) {
+				return null;
+			}
+
+			result %= $checkNum(arguments[i], 'modulo');
 		}
 
 		return result;
 	}, // }}}
 	multiplication: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+		if(Type.isNull(arguments[0])) {
+			return null;
 		}
 
-		var result = $check(arguments[0], 'multiplication');
+		var result = $checkNum(arguments[0], 'multiplication');
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result *= $check(arguments[i], 'multiplication');
+			result *= $checkNum(arguments[i], 'multiplication');
 		}
 
 		return result;
 	}, // }}}
-	negative: function(value) { // {{{
-		if(!Type.isValue(value)) {
-			return null
+	negation: function(value) { // {{{
+		if(Type.isNull(value)) {
+			return true;
+		}
+		if(Type.isBoolean(value)) {
+			return !value;
+		}
+		if(Type.isNumeric(value)) {
+			return ~value;
 		}
 
-		return -$check(value, 'negative');
+		throw new TypeError('The element of a negation must be either a boolean or a number');
+	}, // }}}
+	negationNum: function(value) { // {{{
+		return ~$checkNum(value, 'negation')
+	}, // }}}
+	negative: function(value) { // {{{
+		if(Type.isNull(value)) {
+			return null;
+		}
+
+		return -$checkNum(value, 'negative');
 	}, // }}}
 	neq: function(x, y) { // {{{
 		if(typeof x === typeof y) {
-			return x !== y
+			return x !== y;
 		}
 		else {
-			return true
+			return true;
 		}
 	}, // }}}
-	quotient: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+	or: function() { // {{{
+		var args = Array.from(arguments);
+		var res = args.shift();
+
+		if(Type.isNull(res)) {
+			return null;
+		}
+		if(Type.isBoolean(res)) {
+			return res || Operator.orBool.apply(null, args)
+		}
+		if(Type.isNumeric(result)) {
+			return res | Operator.orNum.apply(null, args)
 		}
 
-		var result = $check(arguments[0], 'quotient');
+		throw new TypeError('The elements of a "or" operation must be either booleans or numbers');
+	}, // }}}
+	orBool: function() { // {{{
+		for(var i = 0; i < arguments.length; i++) {
+			if(arguments[i] === true) {
+				return true;
+			}
+		}
+
+		return false;
+	}, // }}}
+	orNum: function() { // {{{
+		var res = arguments[0];
+
+		if(Type.isNull(res)) {
+			return null;
+		}
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result = Number.parseInt(result / $check(arguments[i], 'quotient'));
+			res &= $checkNum(arguments[i], 'or');
+		}
+
+		return res;
+	}, // }}}
+	quotient: function() { // {{{
+		if(Type.isNull(arguments[0])) {
+			return null;
+		}
+
+		var result = $checkNum(arguments[0], 'quotient');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(Type.isNull(arguments[i])) {
+				return null;
+			}
+
+			result = Number.parseInt(result / $checkNum(arguments[i], 'quotient'));
+		}
+
+		return result;
+	}, // }}}
+	rightShift: function() { // {{{
+		if(Type.isNull(arguments[0])) {
+			return null;
+		}
+
+		var result = $checkNum(arguments[0], 'right-shift');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(Type.isNull(arguments[i])) {
+				return null;
+			}
+
+			result >>= $checkNum(arguments[i], 'right-shift');
 		}
 
 		return result;
 	}, // }}}
 	subtraction: function() { // {{{
-		if(!Type.isValue(arguments[0])) {
-			return null
+		if(Type.isNull(arguments[0])) {
+			return null;
 		}
 
-		var result = $check(arguments[0], 'subtraction');
+		var result = $checkNum(arguments[0], 'subtraction');
 
 		for(var i = 1; i < arguments.length; i++) {
-			if(!Type.isValue(arguments[i])) {
-				return null
+			if(Type.isNull(arguments[i])) {
+				return null;
 			}
 
-			result -= $check(arguments[i], 'subtraction');
+			result -= $checkNum(arguments[i], 'subtraction');
 		}
 
 		return result;
 	}, // }}}
 	xor: function() { // {{{
-		var result = false;
+		var args = Array.from(arguments);
+		var res = args[0];
 
-		for(var i = 0; i < arguments.length; i++) {
-			if(arguments[i]) {
-				if(result) {
-					return false;
-				}
-				else {
-					result = true;
-				}
-			}
+		if(Type.isNull(res)) {
+			return null;
+		}
+		if(Type.isBoolean(res)) {
+			return Operator.xorBool.apply(null, args)
+		}
+		if(Type.isNumeric(result)) {
+			args.shift();
+
+			return res ^ Operator.xorNum.apply(null, args)
 		}
 
-		return result;
+		throw new TypeError('The elements of a "xor" operation must be either booleans or numbers');
+	}, // }}}
+	xorBool: function() { // {{{
+		var res = arguments[0] === true;
+
+		for(var i = 1; i < arguments.length; i++) {
+			res = res !== (arguments[i] === true)
+		}
+
+		return res;
+	}, // }}}
+	xorNum: function() { // {{{
+		var res = arguments[0];
+
+		if(Type.isNull(res)) {
+			return null;
+		}
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(Type.isNull(arguments[i])) {
+				return null;
+			}
+
+			res ^= $checkNum(arguments[i], 'xor');
+		}
+
+		return res;
 	} // }}}
 }
 
