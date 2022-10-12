@@ -152,6 +152,21 @@ var Type = {
 	isNamespace: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'namespace';
 	}, // }}}
+	isNotEmpty: function(item) { // {{{
+		if($isArray(item) || Type.isString(item)) {
+			return item.length > 0;
+		}
+
+		var type = Type.typeOf(item);
+
+		if(type === 'dictionary') {
+			for(var name in item) {
+				return true;
+			}
+		}
+
+		return false
+	}, // }}}
 	isNull: function(item) { // {{{
 		return item === void 0 || item === null;
 	}, // }}}
@@ -321,6 +336,19 @@ else {
 Type.isClass = Type.isConstructor;
 Type.isRegex = Type.isRegExp;
 
+function $appendDictionary(src, to) { // {{{
+	var keys = Object.keys(Object(src));
+
+	var key, descriptor;
+	for (var k = 0, l = keys.length; k < l; k++) {
+		key = keys[k];
+		descriptor = Object.getOwnPropertyDescriptor(src, key);
+		if(descriptor !== void 0 && descriptor.enumerable) {
+			to[key] = src[key];
+		}
+	}
+} // }}}
+
 var Helper = {
 	array: function(value) { // {{{
 		if(Type.isEnumerable(value)) {
@@ -485,29 +513,6 @@ var Helper = {
 			return 1;
 		}
 	}, // }}}
-	concatDictionary: function() { // {{{
-		var to = new Dictionary();
-
-		var src, keys, k, l, key, descriptor
-		for(var i = 0; i < arguments.length; i++) {
-			src = arguments[i];
-			if(src === void 0 || src === null) {
-				continue;
-			}
-
-			keys = Object.keys(Object(src));
-
-			for (k = 0, l = keys.length; k < l; k++) {
-				key = keys[k];
-				descriptor = Object.getOwnPropertyDescriptor(src, key);
-				if(descriptor !== void 0 && descriptor.enumerable) {
-					to[key] = src[key];
-				}
-			}
-		}
-
-		return to;
-	}, // }}}
 	concatString: function() { // {{{
 		var str = '';
 
@@ -536,7 +541,7 @@ var Helper = {
 			return self.apply(bind, [].concat(args, Array.prototype.slice.call(arguments)));
 		};
 	}, // }}}
-	enum: function(master, elements) { // {{{
+	enum: function(master, elements, bitmask) { // {{{
 		var e = function(val) {
 			if(val.__ks_enum === e) {
 				return val;
@@ -559,19 +564,40 @@ var Helper = {
 		Object.defineProperty(e, '__ks_members', {
 			value: {}
 		});
-		Object.defineProperty(e, '__ks_from', {
-			value: function(value) {
-				if(!Type.isValue(value)) {
-					return null
+
+		if(bitmask) {
+			Object.defineProperty(e, '__ks_from', {
+				value: function(value) {
+					if(!Type.isValue(value)) {
+						return null
+					}
+					else if(Type.isEnumInstance(value, e)) {
+						return value;
+					}
+					else if(Type.isNumeric(value)) {
+						return e(value);
+					}
+					else {
+						return null;
+					}
 				}
-				else if(Type.isEnumInstance(value, e)) {
-					return value;
+			});
+		}
+		else {
+			Object.defineProperty(e, '__ks_from', {
+				value: function(value) {
+					if(!Type.isValue(value)) {
+						return null
+					}
+					else if(Type.isEnumInstance(value, e)) {
+						return value;
+					}
+					else {
+						return e.__ks_members[value] || null;
+					}
 				}
-				else {
-					return e.__ks_members[value] || null;
-				}
-			}
-		});
+			});
+		}
 
 		for(var key in elements) {
 			e[key] = e(elements[key]);
@@ -579,16 +605,14 @@ var Helper = {
 
 		return e;
 	}, // }}}
-	isEmptyDictionary: function(value) { // {{{
-		if(Type.typeOf(value) !== 'dictionary') {
-			return false;
-		}
-
-		for(var name in value) {
-			return false;
-		}
-
-		return true;
+	function: function(main, router, lengthy) { // {{{
+		var fn = lengthy ? function(x) {
+			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)))
+		} : function() {
+			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)))
+		};
+		fn.__ks_0 = main;
+		return fn;
 	}, // }}}
 	isUsingAllArgs: function(args, pts, index) { // {{{
 		return pts[index] === args.length
@@ -833,6 +857,34 @@ var Helper = {
 
 		return map;
 	}, // }}}
+	newDictionary: function() { // {{{
+		var to = new Dictionary();
+
+		var k, l;
+		for(var i = 0; i < arguments.length; i++) {
+			l = arguments[i];
+			if(l < 0) {
+				k = i;
+				i -= l;
+
+				while(++k <= i) {
+					$appendDictionary(arguments[k], to);
+				}
+			}
+			else {
+				k = i + 1;
+				i += l * 2;
+
+				while(k < i) {
+					to[arguments[k]] = arguments[k + 1];
+
+					k += 2;
+				}
+			}
+		}
+
+		return to;
+	}, // }}}
 	notNull: function(value) { // {{{
 		if(Type.isValue(value)) {
 			return value
@@ -972,10 +1024,10 @@ var Operator = {
 			return false;
 		}
 		if(Type.isBoolean(res)) {
-			return res && Operator.andBool.apply(null, args)
+			return res && Operator.andBool.apply(null, args);
 		}
 		if(Type.isNumeric(result)) {
-			return res & Operator.andNum.apply(null, args)
+			return res & Operator.andNum.apply(null, args);
 		}
 
 		throw new TypeError('The elements of a "and" operation must be either booleans or numbers');
@@ -1127,19 +1179,22 @@ var Operator = {
 	}, // }}}
 	or: function() { // {{{
 		var args = Array.from(arguments);
-		var res = args.shift();
 
-		if(Type.isNull(res)) {
-			return null;
-		}
-		if(Type.isBoolean(res)) {
-			return res || Operator.orBool.apply(null, args)
-		}
-		if(Type.isNumeric(result)) {
-			return res | Operator.orNum.apply(null, args)
-		}
+		while(args.length) {
+			var res = args.shift();
 
-		throw new TypeError('The elements of a "or" operation must be either booleans or numbers');
+			if(Type.isNull(res)) {
+				continue;
+			}
+			if(Type.isBoolean(res)) {
+				return res || Operator.orBool.apply(null, args);
+			}
+			if(Type.isNumeric(result)) {
+				return res | Operator.orNum.apply(null, args);
+			}
+
+			throw new TypeError('The elements of a "or" operation must be either booleans or numbers');
+		}
 	}, // }}}
 	orBool: function() { // {{{
 		for(var i = 0; i < arguments.length; i++) {
@@ -1220,21 +1275,24 @@ var Operator = {
 	}, // }}}
 	xor: function() { // {{{
 		var args = Array.from(arguments);
-		var res = args[0];
 
-		if(Type.isNull(res)) {
-			return null;
-		}
-		if(Type.isBoolean(res)) {
-			return Operator.xorBool.apply(null, args)
-		}
-		if(Type.isNumeric(result)) {
-			args.shift();
+		for(var index = 0; index < args.length; index++) {
+			var res = args[index];
 
-			return res ^ Operator.xorNum.apply(null, args)
-		}
+			if(Type.isNull(res)) {
+				continue;
+			}
+			if(Type.isBoolean(res)) {
+				return Operator.xorBool.apply(null, args);
+			}
+			if(Type.isNumeric(result)) {
+				args.shift();
 
-		throw new TypeError('The elements of a "xor" operation must be either booleans or numbers');
+				return res ^ Operator.xorNum.apply(null, args);
+			}
+
+			throw new TypeError('The elements of a "xor" operation must be either booleans or numbers');
+		}
 	}, // }}}
 	xorBool: function() { // {{{
 		var res = arguments[0] === true;
@@ -1266,6 +1324,7 @@ var Operator = {
 
 var Dictionary = function() {};
 Dictionary.prototype = Object.create(null);
+Dictionary.entries = Object.entries;
 Dictionary.keys = Object.keys;
 Dictionary.values = Object.values;
 
