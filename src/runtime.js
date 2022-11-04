@@ -176,9 +176,6 @@ var Type = {
 	isNumeric: function(item) { // {{{
 		return Type.isNumber(item) || Type.isBigInt(item);
 	}, // }}}
-	isObject: function(item) { // {{{
-		return Type.typeOf(item) === 'object';
-	}, // }}}
 	isPrimitive: function(item) { // {{{
 		var type = typeof item;
 		return type === 'string' || type === 'number' || type === 'boolean';
@@ -233,6 +230,24 @@ var Type = {
 };
 
 if(/foo/.constructor.name === 'RegExp') {
+	Type.isObject = function(item) { // {{{
+		var type = typeof item;
+
+		if(type === 'object') {
+			if(item === null) {
+				return false;
+			}
+			if (!!item.__ks_struct || !!item.__ks_type || !item.constructor || item instanceof Dictionary) {
+				return true;
+			}
+			if(!!item.__ks_tuple || !!item.__ks_enum || item.constructor.name === 'Array') {
+				return false;
+			}
+			return true;
+		}
+
+		return false;
+	}; // }}}
 	Type.isRegExp = function(item) { // {{{
 		return item !== null && typeof item === 'object' && !!item.constructor && item.constructor.name === 'RegExp';
 	}; // }}}
@@ -282,6 +297,25 @@ if(/foo/.constructor.name === 'RegExp') {
 	}; // }}}
 }
 else {
+	Type.isObject = function(item) { // {{{
+		var type = typeof item;
+
+		if(type === 'object') {
+			if(item === null) {
+				return false;
+			}
+			var name = Object.prototype.toString.call(item);
+			if (!!item.__ks_struct || !!item.__ks_type || name === '[object Dictionary]') {
+				return true;
+			}
+			if(!!item.__ks_tuple || !!item.__ks_enum || name === '[object Array]') {
+				return false;
+			}
+			return true;
+		}
+
+		return false;
+	}; // }}}
 	Type.isRegExp = function(item) { // {{{
 		return item !== null && typeof item === 'object' && Object.prototype.toString.call(item) === '[object RegExp]';
 	}; // }}}
