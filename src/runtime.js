@@ -421,26 +421,15 @@ var Helper = {
 
 		return fn.bind(bind);
 	}, // }}}
-	cast: function(value, type, nullable) { // {{{
-		for(var i = 3; i < arguments.length; i += 2) {
-			if(arguments[i] == null) {
-				if(Type['is' + arguments[i + 1]](value)) {
-					return value;
-				}
-			}
-			else {
-				if(Type['is' + arguments[i + 1] + 'Instance'](value, arguments[i])) {
-					return value;
-				}
-			}
+	cast: function(value, type, nullable, test) { // {{{
+		if(test(value)) {
+			return value
 		}
-
 		if(nullable) {
 			return null;
 		}
-		else {
-			throw new TypeError('The given value can\'t be casted as a "' + type + '"');
-		}
+
+		throw new TypeError('The given value can\'t be casted as a "' + type + '"');
 	}, // }}}
 	class: function(api) { // {{{
 		var clazz;
