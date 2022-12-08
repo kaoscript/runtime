@@ -90,47 +90,9 @@ var Type = {
 
 		return Object.getOwnPropertyNames(item.prototype).length > 1;
 	}, // }}}
-	isDictionary: function(item, rest, props) { // {{{
-		if(Type.typeOf(item) !== 'dictionary') {
-			return false;
-		}
-
-		// if(rest) {
-		// 	if(props) {
-		// 		for(var key in item) {
-		// 			if(props[key]) {
-		// 				if(!props[key](item[key])) {
-		// 					return false
-		// 				}
-		// 			}
-		// 			else {
-		// 				if(!rest(item[key])) {
-		// 					return false
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// 	else {
-		// 		for(var key in item) {
-		// 			if(!rest(item[key])) {
-		// 				return false
-		// 			}
-		// 		}
-		// 	}
-		// }
-		// else if(props) {
-		// 	for(var key in props) {
-		// 		if(!props[key](item[key])) {
-		// 			return false
-		// 		}
-		// 	}
-		// }
-
-		return true;
-	}, // }}}
 	isDestructurableObject: function(item) { // {{{
 		var type = Type.typeOf(item);
-		return type === 'struct-instance' || type === 'dictionary' || type === 'object';
+		return type === 'struct-instance' || type === 'object';
 	}, // }}}
 	isEnum: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'enum';
@@ -159,7 +121,7 @@ var Type = {
 
 		var type = Type.typeOf(item);
 
-		if(type === 'dictionary') {
+		if(type === 'object') {
 			for(var name in item) {
 				return true;
 			}
@@ -237,7 +199,7 @@ if(/foo/.constructor.name === 'RegExp') {
 			if(item === null) {
 				return false;
 			}
-			if (!!item.__ks_struct || !!item.__ks_type || !item.constructor || item instanceof Dictionary) {
+			if (!!item.__ks_struct || !!item.__ks_type || !item.constructor || item instanceof OBJ) {
 				return true;
 			}
 			if(!!item.__ks_tuple || !!item.__ks_enum || item.constructor.name === 'Array') {
@@ -265,8 +227,8 @@ if(/foo/.constructor.name === 'RegExp') {
 			else if(!!item.__ks_tuple) {
 				return 'tuple-instance';
 			}
-			else if(!item.constructor || item instanceof Dictionary) {
-				return 'dictionary';
+			else if(!item.constructor || item instanceof OBJ) {
+				return 'object';
 			}
 			else if(item.constructor.name === 'Array') {
 				return 'array';
@@ -305,7 +267,7 @@ else {
 				return false;
 			}
 			var name = Object.prototype.toString.call(item);
-			if (!!item.__ks_struct || !!item.__ks_type || name === '[object Dictionary]') {
+			if (!!item.__ks_struct || !!item.__ks_type || name === '[object OBJ]') {
 				return true;
 			}
 			if(!!item.__ks_tuple || !!item.__ks_enum || name === '[object Array]') {
@@ -335,8 +297,8 @@ else {
 			else if(!!item.__ks_tuple) {
 				return 'tuple-instance';
 			}
-			else if(name === '[object Dictionary]') {
-				return 'dictionary';
+			else if(name === '[object OBJ]') {
+				return 'object';
 			}
 			else if(name === '[object Array]') {
 				return 'array';
@@ -370,7 +332,7 @@ else {
 Type.isClass = Type.isConstructor;
 Type.isRegex = Type.isRegExp;
 
-function $appendDictionary(src, to) { // {{{
+function $appendObject(src, to) { // {{{
 	var keys = Object.keys(Object(src));
 
 	var key, descriptor;
@@ -689,19 +651,19 @@ var Helper = {
 
 		return map;
 	}, // }}}
-	mapDictionary: function(dict, iterator, condition) { // {{{
+	mapObject: function(obj, iterator, condition) { // {{{
 		var map = [];
 
 		if(condition) {
-			for(var key in dict) {
-				if(condition(key, dict[key])) {
-					map.push(iterator(key, dict[key]));
+			for(var key in obj) {
+				if(condition(key, obj[key])) {
+					map.push(iterator(key, obj[key]));
 				}
 			}
 		}
 		else {
-			for(var key in dict) {
-				map.push(iterator(key, dict[key]));
+			for(var key in obj) {
+				map.push(iterator(key, obj[key]));
 			}
 		}
 
@@ -880,8 +842,8 @@ var Helper = {
 
 		return map;
 	}, // }}}
-	newDictionary: function() { // {{{
-		var to = new Dictionary();
+	newObject: function() { // {{{
+		var to = new OBJ();
 
 		var k, l;
 		for(var i = 0; i < arguments.length; i++) {
@@ -891,7 +853,7 @@ var Helper = {
 				i -= l;
 
 				while(++k <= i) {
-					$appendDictionary(arguments[k], to);
+					$appendObject(arguments[k], to);
 				}
 			}
 			else {
@@ -1345,11 +1307,8 @@ var Operator = {
 	} // }}}
 }
 
-var Dictionary = function() {};
-Dictionary.prototype = Object.create(null);
-Dictionary.entries = Object.entries;
-Dictionary.keys = Object.keys;
-Dictionary.values = Object.values;
+var OBJ = function() {};
+OBJ.prototype = Object.create(null);
 
 try {
 	eval('class $$ {}');
@@ -1372,8 +1331,8 @@ try {
 catch(e) {}
 
 module.exports = {
-	Dictionary: Dictionary,
 	Helper: Helper,
+	OBJ: OBJ,
 	Operator: Operator,
 	Type: Type,
 	initFlag: initFlag
