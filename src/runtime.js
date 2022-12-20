@@ -199,10 +199,10 @@ if(/foo/.constructor.name === 'RegExp') {
 			if(item === null) {
 				return false;
 			}
-			if (!!item.__ks_struct || !!item.__ks_type || !item.constructor || item instanceof OBJ) {
+			if (!!item.__ks_struct || !item.constructor || item instanceof OBJ) {
 				return true;
 			}
-			if(!!item.__ks_tuple || !!item.__ks_enum || item.constructor.name === 'Array') {
+			if(!!item.__ks_enum || !!item.__ks_tuple || !!item.__ks_type || item.constructor.name === 'Array') {
 				return false;
 			}
 			return true;
@@ -267,10 +267,10 @@ else {
 				return false;
 			}
 			var name = Object.prototype.toString.call(item);
-			if (!!item.__ks_struct || !!item.__ks_type || name === '[object OBJ]') {
+			if (!!item.__ks_struct || name === '[object OBJ]') {
 				return true;
 			}
-			if(!!item.__ks_tuple || !!item.__ks_enum || name === '[object Array]') {
+			if(!!item.__ks_enum || !!item.__ks_tuple || !!item.__ks_type || name === '[object Array]') {
 				return false;
 			}
 			return true;
@@ -357,6 +357,48 @@ var Helper = {
 		}
 		else {
 			return [value];
+		}
+	}, // }}}
+	assertLoop: function(kind, lowName, low, highName, high, stepName, step) { // {{{
+		if(lowName.length > 0 && !Type.isNumeric(low)) {
+			throw new TypeError('The expression "' + lowName + '" must be a number');
+		}
+		if(highName.length > 0 && !Type.isNumeric(high)) {
+			throw new TypeError('The expression "' + highName + '" must be a number');
+		}
+		if(stepName.length > 0) {
+			if(!Type.isNumeric(step)) {
+				throw new TypeError('The expression "' + stepName + '" must be a number');
+			}
+			if(step === 0) {
+				throw new TypeError('The expression "' + stepName + '" must not be equal to 0');
+			}
+		}
+
+		if(kind) {
+			return;
+		}
+
+		if(step > 0) {
+			return [low, high, step, (x) => x];
+		}
+		else {
+			return [0, low - high, -step, (x) => low - x];
+		}
+	}, // }}}
+	assertNumber: function(name, value, kind) { // {{{
+		if(!Type.isNumeric(value)) {
+			throw new TypeError('The expression "' + name + '" must be a number');
+		}
+		if(kind === 1) {
+			if(value >= 0) {
+				throw new TypeError('The expression "' + name + '" must be less than 0');
+			}
+		}
+		else if(kind === 2) {
+			if(value <= 0) {
+				throw new TypeError('The expression "' + name + '" must be greater than 0');
+			}
 		}
 	}, // }}}
 	badArgs: function() { // {{{
