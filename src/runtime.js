@@ -402,6 +402,11 @@ var Helper = {
 				throw new TypeError('The expression "' + name + '" must be greater than 0');
 			}
 		}
+		else if(kind === 3) {
+			if(value < 0) {
+				throw new TypeError('The expression "' + name + '" must be greater than or equal to 0');
+			}
+		}
 	}, // }}}
 	assertSplit: function(name, value, min) { // {{{
 		if(name.length > 0 && !Type.isNumeric(value)) {
