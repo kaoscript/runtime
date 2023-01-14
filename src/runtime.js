@@ -359,7 +359,7 @@ var Helper = {
 			return [value];
 		}
 	}, // }}}
-	assertLoop: function(kind, lowName, low, highName, high, stepName, step) { // {{{
+	assertLoop: function(kind, lowName, low, highName, high, maxHigh, stepName, step) { // {{{
 		if(lowName.length > 0 && !Type.isNumeric(low)) {
 			throw new TypeError('The expression "' + lowName + '" must be a number');
 		}
@@ -378,6 +378,8 @@ var Helper = {
 		if(kind) {
 			return;
 		}
+
+		high = Math.min(high, maxHigh);
 
 		if(step > 0) {
 			return [low, high, step, (x) => x];
@@ -400,6 +402,16 @@ var Helper = {
 				throw new TypeError('The expression "' + name + '" must be greater than 0');
 			}
 		}
+	}, // }}}
+	assertSplit: function(name, value, min) { // {{{
+		if(name.length > 0 && !Type.isNumeric(value)) {
+			throw new TypeError('The expression "' + name + '" must be a number');
+		}
+		if(value <= 0) {
+			throw new TypeError('The expression "' + name + '" must be greater than 0');
+		}
+
+		return Math.max(value, min)
 	}, // }}}
 	badArgs: function() { // {{{
 		return new TypeError('Invalid arguments');
