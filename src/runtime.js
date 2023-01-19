@@ -332,19 +332,6 @@ else {
 Type.isClass = Type.isConstructor;
 Type.isRegex = Type.isRegExp;
 
-function $appendObject(src, to) { // {{{
-	var keys = Object.keys(Object(src));
-
-	var key, descriptor;
-	for (var k = 0, l = keys.length; k < l; k++) {
-		key = keys[k];
-		descriptor = Object.getOwnPropertyDescriptor(src, key);
-		if(descriptor !== void 0 && descriptor.enumerable) {
-			to[key] = src[key];
-		}
-	}
-} // }}}
-
 var Helper = {
 	array: function(value) { // {{{
 		if(Type.isEnumerable(value)) {
@@ -555,6 +542,21 @@ var Helper = {
 		}
 		else {
 			return 1;
+		}
+	}, // }}}
+	concatObject: function(obj) { // {{{
+		for(var i = 1; i < arguments.length; i++) {
+			var src = arguments[i]
+			var keys = Object.keys(Object(src));
+
+			for (var k = 0, l = keys.length; k < l; k++) {
+				var key = keys[k];
+				var descriptor = Object.getOwnPropertyDescriptor(src, key);
+
+				if(descriptor !== void 0 && descriptor.enumerable) {
+					obj[key] = src[key];
+				}
+			}
 		}
 	}, // }}}
 	concatString: function() { // {{{
@@ -900,34 +902,6 @@ var Helper = {
 		}
 
 		return map;
-	}, // }}}
-	newObject: function() { // {{{
-		var to = new OBJ();
-
-		var k, l;
-		for(var i = 0; i < arguments.length; i++) {
-			l = arguments[i];
-			if(l < 0) {
-				k = i;
-				i -= l;
-
-				while(++k <= i) {
-					$appendObject(arguments[k], to);
-				}
-			}
-			else {
-				k = i + 1;
-				i += l * 2;
-
-				while(k < i) {
-					to[arguments[k]] = arguments[k + 1];
-
-					k += 2;
-				}
-			}
-		}
-
-		return to;
 	}, // }}}
 	notNull: function(value) { // {{{
 		if(Type.isValue(value)) {
