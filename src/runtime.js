@@ -575,25 +575,27 @@ var Helper = {
 
 		return str;
 	}, // }}}
-	create: function(cons, args) { // {{{
-		if(Type.isConstructor(cons)) {
-			var o = Object.create(cons.prototype);
+	create: function(clazz, args) { // {{{
+		var o = Object.create(clazz.prototype);
 
-			cons.apply(o, args);
+		clazz.apply(o, args);
 
-			return o;
-		}
-
-		if(Type.isStruct(cons) || Type.isTuple(cons)) {
-			return cons.apply(null, args);
-		}
-
-		throw new TypeError('Could not create object');
+		return o;
 	}, // }}}
-	curry: function(self, bind, args) { // {{{
-		return function() {
-			return self.apply(bind, [].concat(args, Array.prototype.slice.call(arguments)));
-		};
+	curry: function(router) { // {{{
+		var funcs = Array.prototype.slice.call(arguments);
+
+		funcs.shift();
+
+		var fn = function() {
+			return router.apply(null, [funcs].concat(Array.prototype.slice.call(arguments)));
+		}
+
+		for(var i = 0; i < funcs.length; i++) {
+			fn['__ks_' + i] = funcs[i];
+		}
+
+		return fn;
 	}, // }}}
 	enum: function(master, elements, bitmask) { // {{{
 		var e = function(val) {
@@ -661,9 +663,9 @@ var Helper = {
 	}, // }}}
 	function: function(main, router, lengthy) { // {{{
 		var fn = lengthy ? function(x) {
-			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)))
+			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)));
 		} : function() {
-			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)))
+			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)));
 		};
 		fn.__ks_0 = main;
 		return fn;
