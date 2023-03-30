@@ -16,37 +16,14 @@ var $isArray = Array.isArray || function(item) { // {{{
 }; // }}}
 
 var Type = {
-	isArray: function(item, rest, props) { // {{{
+	isArray: function(item, rest) { // {{{
 		if(!$isArray(item)) {
 			return false;
 		}
 
 		// if(rest) {
-		// 	if(props) {
-		// 		for(var i = 0, l = item.length; i < l; ++i) {
-		// 			if(props[i]) {
-		// 				if(!props[i](item[i])) {
-		// 					return false
-		// 				}
-		// 			}
-		// 			else {
-		// 				if(!rest(item[i])) {
-		// 					return false
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// 	else {
-		// 		for(var i = 0, l = item.length; i < l; ++i) {
-		// 			if(!rest(item[i])) {
-		// 				return false
-		// 			}
-		// 		}
-		// 	}
-		// }
-		// else if(props) {
 		// 	for(var i = 0, l = item.length; i < l; ++i) {
-		// 		if(!props[i](item[i])) {
+		// 		if(!rest(item[i])) {
 		// 			return false
 		// 		}
 		// 	}
@@ -93,6 +70,103 @@ var Type = {
 	isDestructurableObject: function(item) { // {{{
 		var type = Type.typeOf(item);
 		return type === 'struct-instance' || type === 'object';
+	}, // }}}
+	isDexArray: function(item, type, min, max, rest, props) { // {{{
+		if(type !== 0) {
+			var name = Type.typeOf(item);
+
+			if(type === 2) {
+				if(name !== 'array') {
+					return false;
+				}
+			}
+			else {
+				if(name !== 'array' && name !== 'tuple-instance') {
+					return false;
+				}
+			}
+		}
+
+		if(min) {
+			if(min > item.length) {
+				return false;
+			}
+			if(max && max < item.length) {
+				return false;
+			}
+
+			if(rest) {
+				if(props) {
+					for(var i = 0; i < min; ++i) {
+						if(!props[i] && !rest(item[i])) {
+							return false;
+						}
+					}
+				}
+				else {
+					for(var i = 0; i < min; ++i) {
+						if(!rest(item[i])) {
+							return false;
+						}
+					}
+				}
+			}
+		}
+
+		if(props) {
+			if(item.length < props.length) {
+				return false;
+			}
+
+			for(var i = 0, l = props.length; i < l; ++i) {
+				if(!props[i](item[i])) {
+					return false
+				}
+			}
+		}
+
+		return true;
+	}, // }}}
+	isDexObject: function(item, type, rest, props) { // {{{
+		if(type !== 0) {
+			var name = Type.typeOf(item);
+
+			if(type === 2) {
+				if(name !== 'object') {
+					return false;
+				}
+			}
+			else {
+				if(name !== 'object' && name !== 'struct-instance') {
+					return false;
+				}
+			}
+		}
+
+		if(props) {
+			for(var name in props) {
+				if(!props[name](item[name])) {
+					return false
+				}
+			}
+
+			if(rest) {
+				for(var name in item) {
+					if(!props[name] && !rest(item[name])) {
+						return false;
+					}
+				}
+			}
+		}
+		else if(rest) {
+			for(var name in item) {
+				if(!rest(item[name])) {
+					return false;
+				}
+			}
+		}
+
+		return true;
 	}, // }}}
 	isEnum: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'enum';
@@ -346,6 +420,16 @@ var Helper = {
 			return [value];
 		}
 	}, // }}}
+	assertDexArray: function(item, type, min, max, rest, props) { // {{{
+		if(!Type.isDexArray(item, type, min, max, rest, props)) {
+			throw new TypeError('The subject of the destructuring must be an array');
+		}
+	}, // }}}
+	assertDexObject: function(item, type, rest, props) { // {{{
+		if(!Type.isDexObject(item, type, rest, props)) {
+			throw new TypeError('The subject of the destructuring must be an object');
+		}
+	}, // }}}
 	assertLoop: function(kind, lowName, low, highName, high, maxHigh, stepName, step) { // {{{
 		if(lowName.length > 0 && !Type.isNumeric(low)) {
 			throw new TypeError('The expression "' + lowName + '" must be a number');
@@ -597,6 +681,28 @@ var Helper = {
 
 		return fn;
 	}, // }}}
+	default: function(value, kind, fn) { // {{{
+		if(value === void 0) {
+			return fn();
+		}
+		else if(value === null) {
+			return kind ? fn() : null;
+		}
+		else if(kind === 2 && Type.isNotEmpty(value)) {
+			return fn();
+		}
+		else {
+			return value;
+		}
+	}, // }}}
+	// defaultProp: function(object, property, kind, fn) { // {{{
+	// 	if(Type.isDexObject(object)) {
+	// 		return Helper.default(object[property], kind, fn);
+	// 	}
+	// 	else {
+	// 		return fn();
+	// 	}
+	// }, // }}}
 	enum: function(master, elements, bitmask) { // {{{
 		var e = function(val) {
 			if(val.__ks_enum === e) {
@@ -835,6 +941,19 @@ var Helper = {
 		}
 
 		return map;
+	}, // }}}
+	memo: function(fn) { // {{{
+		var p = false;
+		var r;
+
+		return function() {
+			if(!p) {
+				r = fn.apply(null, arguments);
+				p = true;
+			}
+
+			return r
+		}
 	}, // }}}
 	namespace: function(fn) { // {{{
 		var n = fn();
