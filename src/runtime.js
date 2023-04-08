@@ -87,40 +87,34 @@ var Type = {
 			}
 		}
 
-		if(min) {
-			if(min > item.length) {
-				return false;
-			}
-			if(max && max < item.length) {
-				return false;
+		if(min && min > item.length) {
+			return false;
+		}
+		if(max && max < item.length) {
+			return false;
+		}
+
+		if(props) {
+			var m = Math.min(item.length, props.length);
+
+			for(var i = 0, l = m; i < l; ++i) {
+				if(!props[i](item[i])) {
+					return false
+				}
 			}
 
 			if(rest) {
-				if(props) {
-					for(var i = 0; i < min; ++i) {
-						if(!props[i] && !rest(item[i])) {
-							return false;
-						}
-					}
-				}
-				else {
-					for(var i = 0; i < min; ++i) {
-						if(!rest(item[i])) {
-							return false;
-						}
+				for(var i = m, l = item.length; i < l; ++i) {
+					if(!rest(item[i])) {
+						return false;
 					}
 				}
 			}
 		}
-
-		if(props) {
-			if(item.length < props.length) {
-				return false;
-			}
-
-			for(var i = 0, l = props.length; i < l; ++i) {
-				if(!props[i](item[i])) {
-					return false
+		else if(rest) {
+			for(var i = 0, l = item.length; i < l; ++i) {
+				if(!rest(item[i])) {
+					return false;
 				}
 			}
 		}
@@ -681,7 +675,7 @@ var Helper = {
 
 		return fn;
 	}, // }}}
-	default: function(value, kind, fn) { // {{{
+	default: function(value, kind, fn, test) { // {{{
 		if(value === void 0) {
 			return fn();
 		}
@@ -692,17 +686,13 @@ var Helper = {
 			return fn();
 		}
 		else {
+			if(test && !test(value)) {
+				throw new TypeError('Invalid value');
+			}
+
 			return value;
 		}
 	}, // }}}
-	// defaultProp: function(object, property, kind, fn) { // {{{
-	// 	if(Type.isDexObject(object)) {
-	// 		return Helper.default(object[property], kind, fn);
-	// 	}
-	// 	else {
-	// 		return fn();
-	// 	}
-	// }, // }}}
 	enum: function(master, elements, bitmask) { // {{{
 		var e = function(val) {
 			if(val.__ks_enum === e) {
