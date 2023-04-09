@@ -72,18 +72,11 @@ var Type = {
 		return type === 'struct-instance' || type === 'object';
 	}, // }}}
 	isDexArray: function(item, type, min, max, rest, props) { // {{{
-		if(type !== 0) {
+		if(type) {
 			var name = Type.typeOf(item);
 
-			if(type === 2) {
-				if(name !== 'array') {
-					return false;
-				}
-			}
-			else {
-				if(name !== 'array' && name !== 'tuple-instance') {
-					return false;
-				}
+			if(name !== 'array' && name !== 'tuple-instance') {
+				return false;
 			}
 		}
 
@@ -122,18 +115,9 @@ var Type = {
 		return true;
 	}, // }}}
 	isDexObject: function(item, type, rest, props) { // {{{
-		if(type !== 0) {
-			var name = Type.typeOf(item);
-
-			if(type === 2) {
-				if(name !== 'object') {
-					return false;
-				}
-			}
-			else {
-				if(name !== 'object' && name !== 'struct-instance') {
-					return false;
-				}
+		if(type) {
+			if(!Type.isObject(item)) {
+				return false;
 			}
 		}
 
