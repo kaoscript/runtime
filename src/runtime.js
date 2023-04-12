@@ -638,11 +638,16 @@ var Helper = {
 		return str;
 	}, // }}}
 	create: function(clazz, args) { // {{{
-		var o = Object.create(clazz.prototype);
+		if(Type.isConstructor(clazz)) {
+			var o = Object.create(clazz.prototype);
 
-		clazz.apply(o, args);
+			clazz.apply(o, args);
 
-		return o;
+			return o;
+		}
+		else {
+			return clazz.new.apply(clazz, args);
+		}
 	}, // }}}
 	curry: function(router) { // {{{
 		var funcs = Array.prototype.slice.call(arguments);
@@ -676,6 +681,9 @@ var Helper = {
 
 			return value;
 		}
+	}, // }}}
+	delete: function(obj, prop) { // {{{
+		delete obj[prop]
 	}, // }}}
 	enum: function(master, elements, bitmask) { // {{{
 		var e = function(val) {
