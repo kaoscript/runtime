@@ -655,7 +655,7 @@ var Helper = {
 		funcs.shift();
 
 		var fn = function() {
-			return router.apply(null, [funcs].concat(Array.prototype.slice.call(arguments)));
+			return router.apply(null, [this, funcs].concat(Array.prototype.slice.call(arguments)));
 		}
 
 		for(var i = 0; i < funcs.length; i++) {
@@ -751,11 +751,13 @@ var Helper = {
 	}, // }}}
 	function: function(main, router, lengthy) { // {{{
 		var fn = lengthy ? function(x) {
-			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)));
+			return router.apply(null, [this, main].concat(Array.prototype.slice.call(arguments)));
 		} : function() {
-			return router.apply(null, [].concat(main, Array.prototype.slice.call(arguments)));
+			return router.apply(null, [this, main].concat(Array.prototype.slice.call(arguments)));
 		};
+
 		fn.__ks_0 = main;
+
 		return fn;
 	}, // }}}
 	isUsingAllArgs: function(args, pts, index) { // {{{
