@@ -202,7 +202,7 @@ var Type = {
 	}, // }}}
 	isStructInstance: function(item, type) { // {{{
 		if(arguments.length > 1) {
-			return Type.isValue(item) && !!item.__ks_struct && item.__ks_struct.indexOf(type) != -1;
+			return Type.isValue(item) && !!item.__ks_struct && item.__ks_struct === type;
 		}
 		else {
 			return Type.isValue(item) && !!item.__ks_struct;
@@ -213,7 +213,7 @@ var Type = {
 	}, // }}}
 	isTupleInstance: function(item, type) { // {{{
 		if(arguments.length > 1) {
-			return Type.isValue(item) && !!item.__ks_tuple && item.__ks_tuple.indexOf(type) != -1;
+			return Type.isValue(item) && !!item.__ks_tuple && item.__ks_tuple === type;
 		}
 		else {
 			return Type.isValue(item) && !!item.__ks_tuple;
@@ -1024,30 +1024,25 @@ var Helper = {
 			throw new TypeError('The given value can\'t be null');
 		}
 	}, // }}}
-	struct: function(creator, router, master) { // {{{
+	struct: function(creator, router) { // {{{
 		var s = function() {
-			return s.__ks_inherits(router.call(null, creator, arguments));
+			var v = router.call(null, creator, arguments);
+			Object.defineProperty(v, '__ks_struct', {
+				value: s
+			});
+			return v;
 		};
 
 		Object.defineProperty(s, '__ks_type', {
 			value: 'struct'
 		});
-		Object.defineProperty(s, '__ks_inheritance', {
-			value: [s].concat(!!master ? master.__ks_inheritance : [])
-		});
-		Object.defineProperty(s, '__ks_inherits', {
-			value: function(v) {
-				Object.defineProperty(v, '__ks_struct', {
-					value: s.__ks_inheritance,
-					configurable: true
-				});
-				return v;
-			}
-		});
 		Object.defineProperty(s, '__ks_new', {
 			value: function() {
-				return s.__ks_inherits(creator.apply(null, arguments));
+				return s.apply(null, arguments);
 			}
+		});
+		Object.defineProperty(s, '__ks_create', {
+			value: creator
 		});
 
 		return s;
@@ -1078,30 +1073,25 @@ var Helper = {
 			return false;
 		}
 	}, // }}}
-	tuple: function(creator, router, master) { // {{{
+	tuple: function(creator, router) { // {{{
 		var s = function() {
-			return s.__ks_inherits(router.call(null, creator, arguments));
+			var v = router.call(null, creator, arguments);
+			Object.defineProperty(v, '__ks_tuple', {
+				value: s
+			});
+			return v;
 		};
 
 		Object.defineProperty(s, '__ks_type', {
 			value: 'tuple'
 		});
-		Object.defineProperty(s, '__ks_inheritance', {
-			value: [s].concat(!!master ? master.__ks_inheritance : [])
-		});
-		Object.defineProperty(s, '__ks_inherits', {
-			value: function(v) {
-				Object.defineProperty(v, '__ks_tuple', {
-					value: s.__ks_inheritance,
-					configurable: true
-				});
-				return v;
-			}
-		});
 		Object.defineProperty(s, '__ks_new', {
 			value: function() {
-				return s.__ks_inherits(creator.apply(null, arguments));
+				return s.apply(null, arguments);
 			}
+		});
+		Object.defineProperty(s, '__ks_create', {
+			value: creator
 		});
 
 		return s;
