@@ -16,6 +16,9 @@ var $isArray = Array.isArray || function(item) { // {{{
 }; // }}}
 
 var Type = {
+	any: function() { // {{{
+		return true;
+	}, // }}}
 	isArray: function(item, rest) { // {{{
 		if(!$isArray(item)) {
 			return false;
@@ -501,11 +504,16 @@ var Helper = {
 
 		throw new TypeError('The given value can\'t be casted as a "' + type + '"');
 	}, // }}}
+	checkArray: function(item) { // {{{
+		if(Type.isArray(item)) {
+			return item;
+		}
+		throw new TypeError('Not an array');
+	}, // }}}
 	checkNum: function(v) { // {{{
 		if(Type.isNumeric(v)) {
-			return v
+			return v;
 		}
-
 		throw new TypeError('Not a number');
 	}, // }}}
 	class: function(api) { // {{{
@@ -613,17 +621,81 @@ var Helper = {
 			return 1;
 		}
 	}, // }}}
-	concatObject: function(obj) { // {{{
-		for(var i = 1; i < arguments.length; i++) {
-			var src = arguments[i]
-			var keys = Object.keys(Object(src));
+	concatArray: function(nullable) { // {{{
+		var arr = [];
+		var arg;
 
-			for (var k = 0, l = keys.length; k < l; k++) {
-				var key = keys[k];
-				var descriptor = Object.getOwnPropertyDescriptor(src, key);
+		if(nullable) {
+			for(var i = 1; i < arguments.length; i++) {
+				arg = arguments[i];
 
-				if(descriptor !== void 0 && descriptor.enumerable) {
-					obj[key] = src[key];
+				if(arg === void 0 || arg === null) {
+					continue;
+				}
+				if(!Type.isArray(arg)) {
+					throw new TypeError('Not an array');
+				}
+
+				arr.push.apply(arr, arg);
+			}
+		}
+		else {
+			for(var i = 1; i < arguments.length; i++) {
+				arg = arguments[i];
+
+				if(!Type.isArray(arg)) {
+					throw new TypeError('Not an array');
+				}
+
+				arr.push.apply(arr, arg);
+			}
+		}
+
+		return arr;
+	}, // }}}
+	concatObject: function(nullable, obj) { // {{{
+		var arg, keys, key, descriptor;
+
+		if(nullable) {
+			for(var i = 2; i < arguments.length; i++) {
+				arg = arguments[i];
+
+				if(arg === void 0 || arg === null) {
+					continue;
+				}
+				if(!Type.isObject(arg)) {
+					throw new TypeError('Not an object');
+				}
+
+				keys = Object.keys(Object(arg));
+
+				for (var k = 0, l = keys.length; k < l; k++) {
+					key = keys[k];
+					descriptor = Object.getOwnPropertyDescriptor(arg, key);
+
+					if(descriptor !== void 0 && descriptor.enumerable) {
+						obj[key] = arg[key];
+					}
+				}
+			}
+		}
+		else {
+			for(var i = 2; i < arguments.length; i++) {
+				arg = arguments[i];
+
+				if(!Type.isObject(arg)) {
+					throw new TypeError('Not an object');
+				}
+
+				keys = Object.keys(Object(arg));
+
+				for (var k = 0, l = keys.length; k < l; k++) {
+					key = keys[k];
+					descriptor = Object.getOwnPropertyDescriptor(arg, key);
+
+					if(descriptor !== void 0 && descriptor.enumerable) {
+						obj[key] = arg[key];
+					}
 				}
 			}
 		}
@@ -1054,13 +1126,20 @@ var Helper = {
 
 		return s;
 	}, // }}}
+	toArray: function(value, check) { // {{{
+		if(value === void 0 || value === null) {
+			return [];
+		}
+		if(check) {
+			return Helper.checkArray(value);
+		}
+		return value;
+	}, // }}}
 	toString: function(value) { // {{{
 		if(value === void 0 || value === null) {
 			return '';
 		}
-		else {
-			return '' + value;
-		}
+		return '' + value;
 	}, // }}}
 	try: function(fn, defaultValue) { // {{{
 		try {
