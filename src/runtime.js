@@ -828,6 +828,18 @@ var Helper = {
 
 		return e;
 	}, // }}}
+	equalEnum: function(type, test, value) { // {{{
+		if(!Type.isValue(value)) {
+			return false
+		}
+		if(Type.isEnumInstance(value, type)) {
+			return test(value)
+		}
+		if(type.__ks_members[value]) {
+			return test(type.__ks_members[value])
+		}
+		return false
+	}, // }}}
 	function: function(main, router, lengthy) { // {{{
 		var fn = lengthy ? function(x) {
 			return router.apply(null, [this, main].concat(Array.prototype.slice.call(arguments)));
