@@ -40,6 +40,17 @@ var Type = {
 	isBigInt: function(item) { // {{{
 		return typeof item === 'bigint' || item instanceof BigInt;
 	}, // }}}
+	isBitmask: function(item) { // {{{
+		return Type.isValue(item) && item.__ks_type === 'bitmask';
+	}, // }}}
+	isBitmaskInstance: function(item, type) { // {{{
+		if(arguments.length > 1) {
+			return Type.isValue(item) && item.__ks_bitmask === type;
+		}
+		else {
+			return Type.isValue(item) && !!item.__ks_bitmask;
+		}
+	}, // }}}
 	isClassInstance: function(item, type) { // {{{
 		if(!item) {
 			return false;
@@ -291,6 +302,9 @@ if(/foo/.constructor.name === 'RegExp') {
 			else if(!!item.__ks_type) {
 				return item.__ks_type;
 			}
+			else if(!!item.__ks_bitmask) {
+				return 'bitmask-member';
+			}
 			else if(!!item.__ks_enum) {
 				return 'enum-member';
 			}
@@ -363,6 +377,9 @@ else {
 			}
 			else if(!!item.__ks_enum) {
 				return 'enum-member';
+			}
+			else if(!!item.__ks_bitmask) {
+				return 'bitmask-member';
 			}
 
 			return 'object';
@@ -493,6 +510,114 @@ var Helper = {
 		}
 
 		return fn.bind(bind);
+	}, // }}}
+	bitmask: function(master, values, aliases) { // {{{
+		var b = function(value) {
+			if(!Type.isValue(value)) {
+				return null
+			}
+			if(value.__ks_bitmask === b) {
+				return value;
+			}
+			if(b.__ks_values[value]) {
+				return b.__ks_values[value];
+			}
+
+			var n = new master(value);
+
+			Object.defineProperty(n, '__ks_bitmask', {
+				value: b
+			});
+			Object.defineProperty(n, 'value', {
+				value: value
+			});
+
+			return n;
+		};
+
+		Object.defineProperty(b, '__ks_type', {
+			value: 'bitmask'
+		});
+		Object.defineProperty(b, '__ks_new_value', {
+			value: function(name, value, index) {
+				var n = new master(value);
+
+				Object.defineProperty(n, '__ks_bitmask', {
+					value: b
+				});
+				Object.defineProperty(n, 'value', {
+					value: value
+				});
+				Object.defineProperty(n, 'name', {
+					value: Type.isString(name) ? name : null
+				});
+				Object.defineProperty(n, 'index', {
+					value: Type.isNumber(index) ? index : null
+				});
+
+				b.values.push(n);
+				b.__ks_names[name] = n;
+				b.__ks_values[value] = n;
+				b[name] = n;
+			}
+		});
+		Object.defineProperty(b, '__ks_new_alias', {
+			value: function(name, value) {
+				var n = new master(value);
+
+				Object.defineProperty(n, '__ks_bitmask', {
+					value: b
+				});
+				Object.defineProperty(n, 'value', {
+					value: value
+				});
+				Object.defineProperty(n, 'name', {
+					value: Type.isString(name) ? name : null
+				});
+
+				b.__ks_names[name] = n;
+				b.__ks_values[value] = n;
+				b[name] = n;
+			}
+		});
+		Object.defineProperty(b, 'values', {
+			value: []
+		});
+		Object.defineProperty(b, '__ks_names', {
+			value: new OBJ()
+		});
+		Object.defineProperty(b, '__ks_values', {
+			value: new OBJ()
+		});
+		Object.defineProperty(b, 'fromIndex', {
+			value: function(index) {
+				return b.values[index];
+			}
+		});
+		Object.defineProperty(b, 'fromName', {
+			value: function(name) {
+				return b.__ks_names[name];
+			}
+		});
+		Object.defineProperty(b, 'fromValue', {
+			value: function(value) {
+				return b.__ks_values[value];
+			}
+		});
+
+		var index = 0;
+
+		for(var i = 0; i < values.length; i += 2) {
+			b.__ks_new_value(values[i], values[i + 1], index++);
+		}
+
+		if(aliases) {
+			for(var i = 0; i < aliases.length; i += 2) {
+				b.__ks_new_alias(aliases[i], aliases[i + 1]);
+			}
+		}
+
+		return b;
 	}, // }}}
 	cast: function(value, type, nullable, test) { // {{{
 		if(test(value)) {
@@ -764,66 +889,88 @@ var Helper = {
 	delete: function(obj, prop) { // {{{
 		delete obj[prop]
 	}, // }}}
-	enum: function(master, elements, bitmask) { // {{{
-		var e = function(val) {
-			if(val.__ks_enum === e) {
-				return val;
+	enum: function(master, fieldLen) { // {{{
+		var e = function(value) {
+			if(!Type.isValue(value)) {
+				return null;
 			}
-
-			var n = new master(val);
-			Object.defineProperty(n, '__ks_enum', {
-				value: e
-			});
-			Object.defineProperty(n, 'value', {
-				value: val
-			});
-			e.__ks_members[val] = n;
-			return n;
+			if(value.__ks_bitmask === e) {
+				return value;
+			}
+			if(e.__ks_values[value]) {
+				return e.__ks_values[value];
+			}
+			return null;
 		};
+
+		var d = 2 + fieldLen;
 
 		Object.defineProperty(e, '__ks_type', {
 			value: 'enum'
 		});
-		Object.defineProperty(e, '__ks_members', {
-			value: {}
+		Object.defineProperty(e, '__ks_new_value', {
+			value: function(name, value, index) {
+				var n = new master(value);
+
+				Object.defineProperty(n, '__ks_enum', {
+					value: e
+				});
+				Object.defineProperty(n, 'value', {
+					value: value
+				});
+				Object.defineProperty(n, 'name', {
+					value: Type.isString(name) ? name : null
+				});
+				Object.defineProperty(n, 'index', {
+					value: Type.isNumber(index) ? index : null
+				});
+
+				e.values.push(n);
+				e.__ks_names[name] = n;
+				e.__ks_values[value] = n;
+				e[name] = n;
+
+				return n;
+			}
+		});
+		Object.defineProperty(e, 'fields', {
+			value: Array.prototype.slice.call(arguments, 2, d)
+		});
+		Object.defineProperty(e, 'values', {
+			value: []
+		});
+		Object.defineProperty(e, '__ks_names', {
+			value: new OBJ()
+		});
+		Object.defineProperty(e, '__ks_values', {
+			value: new OBJ()
+		});
+		Object.defineProperty(e, 'fromIndex', {
+			value: function(index) {
+				return e.values[index];
+			}
+		});
+		Object.defineProperty(e, 'fromName', {
+			value: function(name) {
+				return e.__ks_names[name];
+			}
+		});
+		Object.defineProperty(e, 'fromValue', {
+			value: function(value) {
+				return e.__ks_values[value];
+			}
 		});
 
-		if(bitmask) {
-			Object.defineProperty(e, '__ks_from', {
-				value: function(value) {
-					if(!Type.isValue(value)) {
-						return null
-					}
-					else if(Type.isEnumInstance(value, e)) {
-						return value;
-					}
-					else if(Type.isNumeric(value)) {
-						return e(value);
-					}
-					else {
-						return null;
-					}
-				}
-			});
-		}
-		else {
-			Object.defineProperty(e, '__ks_from', {
-				value: function(value) {
-					if(!Type.isValue(value)) {
-						return null
-					}
-					else if(Type.isEnumInstance(value, e)) {
-						return value;
-					}
-					else {
-						return e.__ks_members[value] || null;
-					}
-				}
-			});
-		}
+		var index = 0;
 
-		for(var key in elements) {
-			e[key] = e(elements[key]);
+		for(var i = d; i < arguments.length; i += d) {
+			var n = e.__ks_new_value(arguments[i], arguments[i + 1], index++);
+
+			for(var k = 2; k < d; k++) {
+				Object.defineProperty(n, arguments[k], {
+					value: arguments[i + k]
+				});
+			}
 		}
 
 		return e;
@@ -850,6 +997,13 @@ var Helper = {
 		fn.__ks_0 = main;
 
 		return fn;
+	}, // }}}
+	implEnum: function(e) { // {{{
+		var index = 0;
+
+		for(var i = 1; i < arguments.length; i += 2) {
+			e.__ks_new_value(arguments[i], arguments[i + 1], index++);
+		}
 	}, // }}}
 	isUsingAllArgs: function(args, pts, index) { // {{{
 		return pts[index] === args.length
