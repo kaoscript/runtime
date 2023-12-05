@@ -160,6 +160,10 @@ var Type = {
 
 		return true;
 	}, // }}}
+	isDXArray: function(item) { // {{{
+		var name = Type.typeOf(item);
+		return name === 'array' || name === 'tuple-instance';
+	}, // }}}
 	isEnum: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'enum';
 	}, // }}}
@@ -998,6 +1002,17 @@ var Helper = {
 
 		return fn;
 	}, // }}}
+	getVarargs: function(args, start, end) { // {{{
+		return Array.from(args).slice(start, end)
+	}, // }}}
+	getVararg: function(args, start, end) { // {{{
+		if(start < end) {
+			return args[start];
+		}
+		else {
+			return void 0;
+		}
+	}, // }}}
 	implEnum: function(e) { // {{{
 		var index = 0;
 
@@ -1028,16 +1043,11 @@ var Helper = {
 			return false;
 		}
 	}, // }}}
-	getVarargs: function(args, start, end) { // {{{
-		return Array.from(args).slice(start, end)
-	}, // }}}
-	getVararg: function(args, start, end) { // {{{
-		if(start < end) {
-			return args[start];
+	length: function(value) { // {{{
+		if(value === void 0 || value === null) {
+			return 0;
 		}
-		else {
-			return void 0;
-		}
+		return value.length;
 	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
 		var map = [];
