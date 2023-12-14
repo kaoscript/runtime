@@ -898,7 +898,7 @@ var Helper = {
 			if(!Type.isValue(value)) {
 				return null;
 			}
-			if(value.__ks_bitmask === e) {
+			if(value.__ks_enum === e) {
 				return value;
 			}
 			if(e.__ks_values[value]) {
