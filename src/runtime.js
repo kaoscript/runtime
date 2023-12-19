@@ -526,6 +526,9 @@ var Helper = {
 			if(b.__ks_values[value]) {
 				return b.__ks_values[value];
 			}
+			if(!Type.isNumeric(value)) {
+				return null;
+			}
 
 			var n = new master(value);
 
@@ -632,6 +635,28 @@ var Helper = {
 		}
 
 		throw new TypeError('The given value can\'t be casted as a "' + type + '"');
+	}, // }}}
+	castBitmask: function(item, name, type, cast) { // {{{
+		if(cast) {
+			var value = type(item[name]);
+			if(value === null) {
+				return false;
+			}
+			item[name] = value;
+			return true;
+		}
+		return Type.isBitmaskInstance(item[name], type);
+	}, // }}}
+	castEnum: function(item, name, type, cast) { // {{{
+		if(cast) {
+			var value = type(item[name]);
+			if(value === null) {
+				return false;
+			}
+			item[name] = value;
+			return true;
+		}
+		return Type.isEnumInstance(item[name], type);
 	}, // }}}
 	checkArray: function(item) { // {{{
 		if(Type.isArray(item)) {
