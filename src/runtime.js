@@ -24,13 +24,13 @@ var Type = {
 			return false;
 		}
 
-		// if(rest) {
-		// 	for(var i = 0, l = item.length; i < l; ++i) {
-		// 		if(!rest(item[i])) {
-		// 			return false
-		// 		}
-		// 	}
-		// }
+		if(rest) {
+			for(var i = 0, l = item.length; i < l; ++i) {
+				if(!rest(item[i])) {
+					return false
+				}
+			}
+		}
 
 		return true;
 	}, // }}}
