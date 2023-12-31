@@ -178,26 +178,28 @@ var Type = {
 	isEnumerable: function(item) { // {{{
 		return item !== null && typeof item === 'object' && typeof item.length === 'number' && item.constructor.name !== 'Function';
 	}, // }}}
+	isFinite: function(item, assert) { // {{{
+		if(assert && !(Type.isNumber(item) || Type.isBigInt(item))) {
+			return false;
+		}
+		return item !== NaN && item !== Infinity;
+	}, // }}}
 	isFunction: function(item) { // {{{
 		return typeof item === 'function';
 	}, // }}}
 	isNamespace: function(item) { // {{{
 		return Type.isValue(item) && item.__ks_type === 'namespace';
 	}, // }}}
-	isNotEmpty: function(item) { // {{{
-		if($isArray(item) || Type.isString(item)) {
+	isNotEmpty: function(item, mode) { // {{{
+		if(mode === 1 || (!mode && ($isArray(item) || Type.isString(item)))) {
 			return item.length > 0;
 		}
-
-		var type = Type.typeOf(item);
-
-		if(type === 'object') {
+		if(mode === 2 || (!mode && (Type.typeOf(item) === 'object'))) {
 			for(var name in item) {
 				return true;
 			}
 		}
-
-		return false
+		return false;
 	}, // }}}
 	isNull: function(item) { // {{{
 		return item === void 0 || item === null;
@@ -422,6 +424,16 @@ var Helper = {
 			return [value];
 		}
 	}, // }}}
+	assert: function(value, type, nullable, test) { // {{{
+		if(test(value)) {
+			return value;
+		}
+		if(nullable) {
+			return null;
+		}
+
+		throw new TypeError('The given value isn\'t a ' + type);
+	}, // }}}
 	assertDexArray: function(item, type, min, max, rest, props) { // {{{
 		if(!Type.isDexArray(item, type, min, max, rest, props)) {
 			throw new TypeError('The subject of the destructuring must be an array');
@@ -432,7 +444,7 @@ var Helper = {
 			throw new TypeError('The subject of the destructuring must be an object');
 		}
 	}, // }}}
-	assertLoop: function(kind, lowName, low, highName, high, maxHigh, stepName, step) { // {{{
+	assertLoopBounds: function(kind, lowName, low, highName, high, maxHigh, stepName, step) { // {{{
 		if(lowName.length > 0 && !Type.isNumeric(low)) {
 			throw new TypeError('The expression "' + lowName + '" must be a number');
 		}
@@ -461,7 +473,7 @@ var Helper = {
 			return [0, low - high, -step, (x) => low - x];
 		}
 	}, // }}}
-	assertNumber: function(name, value, kind) { // {{{
+	assertLoopEdge: function(name, value, kind) { // {{{
 		if(!Type.isNumeric(value)) {
 			throw new TypeError('The expression "' + name + '" must be a number');
 		}
@@ -480,6 +492,25 @@ var Helper = {
 				throw new TypeError('The expression "' + name + '" must be greater than or equal to 0');
 			}
 		}
+	}, // }}}
+	assertNumber: function(item, nullable) { // {{{
+		if(Type.isNumeric(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+		throw new TypeError('The given value isn\'t a Number');
+	}, // }}}
+	assertString: function(item, nullable) { // {{{
+		if(Type.isString(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+
+		throw new TypeError('The given value isn\'t a String');
 	}, // }}}
 	assertSplit: function(name, value, min) { // {{{
 		if(name.length > 0 && !Type.isNumeric(value)) {
@@ -626,15 +657,16 @@ var Helper = {
 
 		return b;
 	}, // }}}
-	cast: function(value, type, nullable, test) { // {{{
-		if(test(value)) {
-			return value
+	cast: function(value, type, nullable, transform) { // {{{
+		value = transform(value);
+		if(value !== null) {
+			return value;
 		}
 		if(nullable) {
 			return null;
 		}
 
-		throw new TypeError('The given value can\'t be casted as a "' + type + '"');
+		throw new TypeError('The given value can\'t be casted as a ' + type);
 	}, // }}}
 	castBitmask: function(item, name, type, cast) { // {{{
 		if(cast) {
@@ -657,6 +689,17 @@ var Helper = {
 			return true;
 		}
 		return Type.isEnumInstance(item[name], type);
+	}, // }}}
+	castEnumView: function(item, name, type, cast, test) { // {{{
+		if(cast) {
+			var value = type(item[name]);
+			if(value === null || !test(value)) {
+				return false;
+			}
+			item[name] = value;
+			return true;
+		}
+		return test(item[name]);
 	}, // }}}
 	checkArray: function(item) { // {{{
 		if(Type.isArray(item)) {
@@ -1068,11 +1111,14 @@ var Helper = {
 			return false;
 		}
 	}, // }}}
-	length: function(value) { // {{{
-		if(value === void 0 || value === null) {
+	length: function(item) { // {{{
+		if(item === void 0 || item === null) {
 			return 0;
 		}
-		return value.length;
+		if(Type.typeOf(item) === 'object') {
+			return Object.keys(item).length;
+		}
+		return item.length;
 	}, // }}}
 	mapArray: function(array, iterator, condition) { // {{{
 		var map = [];
@@ -1304,7 +1350,7 @@ var Helper = {
 			throw new TypeError('The given value can\'t be null');
 		}
 	}, // }}}
-	struct: function(creator, router) { // {{{
+	struct: function(creator, router, caster) { // {{{
 		var s = function() {
 			var v = router.call(null, creator, arguments);
 			Object.defineProperty(v, '__ks_struct', {
@@ -1323,6 +1369,11 @@ var Helper = {
 		});
 		Object.defineProperty(s, '__ks_create', {
 			value: creator
+		});
+		Object.defineProperty(s, '__ks_cast', {
+			value: function() {
+				return caster.call(null, creator, arguments);
+			}
 		});
 
 		return s;
@@ -1538,6 +1589,69 @@ var Operator = {
 
 		return result;
 	}, // }}}
+	divisionEuclidean: function(cx, x, cy, y) { // {{{
+		if(cx) {
+			if(Type.isNull(x)) {
+				return null;
+			}
+
+			x = $checkNum(x, 'euclidean-division');
+		}
+		if(cy) {
+			if(Type.isNull(y)) {
+				return null;
+			}
+
+			y = $checkNum(y, 'euclidean-division');
+		}
+
+		var q = Number.parseInt(x / y)
+		var r = x % y;
+
+		if(y < 0) {
+			if(r > 0) {
+				r = r + y;
+			}
+		}
+		else {
+			if(r < 0) {
+				r = r + y;
+			}
+		}
+
+		return [q, r];
+	}, // }}}
+	divisionInteger: function() { // {{{
+		var x, y;
+
+		if(arguments[0]) {
+			if(Type.isNull(arguments[1])) {
+				return null;
+			}
+
+			x = $checkNum(arguments[1], 'integer-division');
+		}
+		else {
+			x = arguments[1];
+		}
+
+		for(var i = 2; i < arguments.length; i += 2) {
+			if(arguments[i]) {
+				if(Type.isNull(arguments[i + 1])) {
+					return null;
+				}
+
+				y = $checkNum(arguments[i + 1], 'integer-division');
+			}
+			else {
+				y = arguments[i + 1];
+			}
+
+			x = Number.parseInt(x / y);
+		}
+
+		return x;
+	}, // }}}
 	eq: function(x, y) { // {{{
 		if(typeof x === typeof y) {
 			return x === y;
@@ -1558,22 +1672,47 @@ var Operator = {
 	lte: function(x, y) { // {{{
 		return $checkNum(x, 'lte') <= $checkNum(y, 'lte');
 	}, // }}}
-	modulo: function() { // {{{
-		if(Type.isNull(arguments[0])) {
-			return null;
-		}
+	modulus: function() { // {{{
+		var x, y;
 
-		var result = $checkNum(arguments[0], 'modulo');
-
-		for(var i = 1; i < arguments.length; i++) {
-			if(Type.isNull(arguments[i])) {
+		if(arguments[0]) {
+			if(Type.isNull(arguments[1])) {
 				return null;
 			}
 
-			result %= $checkNum(arguments[i], 'modulo');
+			x = $checkNum(arguments[1], 'modulus');
+		}
+		else {
+			x = arguments[1];
 		}
 
-		return result;
+		for(var i = 2; i < arguments.length; i += 2) {
+			if(arguments[i]) {
+				if(Type.isNull(arguments[i + 1])) {
+					return null;
+				}
+
+				y = $checkNum(arguments[i + 1], 'modulus');
+			}
+			else {
+				y = arguments[i + 1];
+			}
+
+			x = x % y;
+
+			if(y < 0) {
+				if(x > 0) {
+					x = x + y;
+				}
+			}
+			else {
+				if(x < 0) {
+					x = x + y;
+				}
+			}
+		}
+
+		return x;
 	}, // }}}
 	multiplication: function() { // {{{
 		if(Type.isNull(arguments[0])) {
@@ -1607,19 +1746,36 @@ var Operator = {
 			return true;
 		}
 	}, // }}}
-	quotient: function() { // {{{
+	power: function() { // {{{
 		if(Type.isNull(arguments[0])) {
 			return null;
 		}
 
-		var result = $checkNum(arguments[0], 'quotient');
+		var result = $checkNum(arguments[0], 'multiplication');
 
 		for(var i = 1; i < arguments.length; i++) {
 			if(Type.isNull(arguments[i])) {
 				return null;
 			}
 
-			result = Number.parseInt(result / $checkNum(arguments[i], 'quotient'));
+			result **= $checkNum(arguments[i], 'multiplication');
+		}
+
+		return result;
+	}, // }}}
+	remainder: function() { // {{{
+		if(Type.isNull(arguments[0])) {
+			return null;
+		}
+
+		var result = $checkNum(arguments[0], 'remainder');
+
+		for(var i = 1; i < arguments.length; i++) {
+			if(Type.isNull(arguments[i])) {
+				return null;
+			}
+
+			result %= $checkNum(arguments[i], 'remainder');
 		}
 
 		return result;
