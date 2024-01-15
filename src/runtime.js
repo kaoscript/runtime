@@ -1533,7 +1533,7 @@ var Operator = {
 				return null;
 			}
 
-			res &= $checkNum(arguments[i], 'or');
+			res |= $checkNum(arguments[i], 'or');
 		}
 
 		return res;
