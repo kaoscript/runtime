@@ -1,0 +1,1 @@
+type VoidThunk = (): Void
