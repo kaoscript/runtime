@@ -4,6 +4,8 @@ disclose String {
 	length: Number
 	charAt(index: Number): Number
 	charCodeAt(index: Number): Number
+	indexOf(search: String, position: Number = 0): Number
+	match(regexp: RegExp): RegExpExecArray?
 	repeat(count: Number): String
 	replace(pattern: RegExp | String, replacement: Function | String): String
 	slice(beginIndex: Number, endIndex: Number = -1): String
@@ -13,4 +15,5 @@ disclose String {
 	substring(indexStart: Number, indexEnd: Number = -1): String
 	toLowerCase(): String
 	toUpperCase(): String
+	trim(): String
 }

@@ -1,6 +1,6 @@
 extern system class Array<T>
 
-disclose Array<T> {
+disclose Array<T is Any?> {
 	length: Number
 	indexOf(searchElement: T, fromIndex: Number = 0): Number
 	join(separator: String?): String
@@ -9,6 +9,7 @@ disclose Array<T> {
 	map(callback: Function, thisArg? = null): []
 	pop(): T?
 	push(...elements: T): Number
+	reverse(): T[]
 	shift(): T?
 	slice(begin: Number = 0, end: Number = -1): T[]
 	// TODO!

@@ -434,6 +434,33 @@ var Helper = {
 
 		throw new TypeError('The given value isn\'t a ' + type);
 	}, // }}}
+	assertArray: function(item, nullable) { // {{{
+		if(Type.isArray(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+		throw new TypeError('The given value isn\'t an Array');
+	}, // }}}
+	assertBoolean: function(item, nullable) { // {{{
+		if(Type.isBoolean(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+		throw new TypeError('The given value isn\'t a Boolean');
+	}, // }}}
+	assertClass: function(item, nullable) { // {{{
+		if(Type.isConstructor(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+		throw new TypeError('The given value isn\'t a Class');
+	}, // }}}
 	assertDexArray: function(item, type, min, max, rest, props) { // {{{
 		if(!Type.isDexArray(item, type, min, max, rest, props)) {
 			throw new TypeError('The subject of the destructuring must be an array');
@@ -443,6 +470,15 @@ var Helper = {
 		if(!Type.isDexObject(item, type, rest, props)) {
 			throw new TypeError('The subject of the destructuring must be an object');
 		}
+	}, // }}}
+	assertFunction: function(item, nullable) { // {{{
+		if(Type.isFunction(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+		throw new TypeError('The given value isn\'t a Function');
 	}, // }}}
 	assertLoopBounds: function(kind, lowName, low, highName, high, maxHigh, stepName, step) { // {{{
 		if(lowName.length > 0 && !Type.isNumeric(low)) {
@@ -502,6 +538,15 @@ var Helper = {
 		}
 		throw new TypeError('The given value isn\'t a Number');
 	}, // }}}
+	assertObject: function(item, nullable) { // {{{
+		if(Type.isObject(item)) {
+			return item;
+		}
+		if(nullable) {
+			return null;
+		}
+		throw new TypeError('The given value isn\'t an Object');
+	}, // }}}
 	assertString: function(item, nullable) { // {{{
 		if(Type.isString(item)) {
 			return item;
@@ -525,7 +570,29 @@ var Helper = {
 	badArgs: function() { // {{{
 		return new TypeError('Invalid arguments');
 	}, // }}}
-	bindMethod: function(bind, name) { // {{{
+	bindAuxiliaryMethod: function(seal, name, bind, generics) { // {{{
+		var fn = seal['_im_' + name];
+
+		if(!fn['__ks_0']) {
+			fn.__ks_0 = bind.constructor.prototype[name].bind(bind);
+
+			var match = '__ks_func_' + name + '_';
+			var mLength = match.length;
+			var props = Object.getOwnPropertyNames(seal);
+
+			for(var i = 0, l = props.length; i < l; ++i) {
+				if(props[i].substring(0, mLength) === match) {
+					var index = props[i].substring(mLength);
+					if(index !== 'rt') {
+						fn['__ks_' + index] = seal[props[i]].bind(bind);
+					}
+				}
+			}
+		}
+
+		return generics ? fn.bind(bind, generics) : fn.bind(bind);
+	}, // }}}
+	bindMethod: function(bind, name, generics) { // {{{
 		var proto = bind.constructor.prototype;
 		var fn = proto[name];
 
@@ -538,13 +605,13 @@ var Helper = {
 				if(props[i].substring(0, mLength) === match) {
 					var index = props[i].substring(mLength);
 					if(index !== 'rt') {
-						fn['__ks_' + index] = proto[props[i]];
+						fn['__ks_' + index] = proto[props[i]].bind(bind);
 					}
 				}
 			}
 		}
 
-		return fn.bind(bind);
+		return generics ? fn.bind(bind, generics) : fn.bind(bind);
 	}, // }}}
 	bitmask: function(master, values, aliases) { // {{{
 		var b = function(value) {
@@ -1080,6 +1147,17 @@ var Helper = {
 		else {
 			return void 0;
 		}
+	}, // }}}
+	getVarargMax: function(args, min, pts, index, max) { // {{{
+		// console.log(args.length, pts, min, index, max)
+		// var d = args.length - pts[index] - min;
+		var d = args.length - min;
+		// console.log(d)
+		for(var i = 0; i <= index; ++i) {
+			d -= pts[i + 1] - pts[i];
+		}
+		// console.log(d)
+		return Math.min(d, max);
 	}, // }}}
 	implEnum: function(e) { // {{{
 		var index = 0;
