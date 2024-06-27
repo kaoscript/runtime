@@ -3,6 +3,7 @@
 include {
 	'./array.ks'
 	'./echo.ks'
+	'./error.ks'
 	'./math.ks'
 	'./object.ks'
 	'./regexp.ks'

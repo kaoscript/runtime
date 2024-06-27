@@ -1,5 +1,5 @@
-macro echo(...args) {
-	macro {
+syntime func echo(...args) {
+	quote {
 		#[rules(ignore-error)]
 		console.log(#(args))
 	}
