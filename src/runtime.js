@@ -411,6 +411,18 @@ Type.isClass = Type.isConstructor;
 Type.isRegex = Type.isRegExp;
 
 var Helper = {
+	alias: function(test) { // {{{
+		var a = new OBJ();
+
+		Object.defineProperty(a, '__ks_type', {
+			value: 'alias'
+		});
+		Object.defineProperty(a, 'is', {
+			value: test
+		});
+
+		return a
+	}, // }}}
 	array: function(value) { // {{{
 		if(Type.isEnumerable(value)) {
 			if(Type.isArray(value)) {
@@ -569,6 +581,9 @@ var Helper = {
 	}, // }}}
 	badArgs: function() { // {{{
 		return new TypeError('Invalid arguments');
+	}, // }}}
+	badRequirements: function() { // {{{
+		return new TypeError('Invalid requirements');
 	}, // }}}
 	bindAuxiliaryMethod: function(seal, name, bind, generics) { // {{{
 		var fn = seal['_im_' + name];
